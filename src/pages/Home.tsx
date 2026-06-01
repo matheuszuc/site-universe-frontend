@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import Header from '../components/Header.jsx'
-import { gameClasses } from '../data/classes.js'
+import { Link } from 'react-router-dom'
+import PublicLayout from '../components/layout/PublicLayout'
+import { gameClasses } from '../data/classes'
 
 export default function Home() {
   const [active, setActive] = useState(0)
   const total = gameClasses.length
 
-  function updateSlide(direction) {
+  function updateSlide(direction: number) {
     setActive((current) => {
       const next = current + direction
       if (next >= total) return 0
@@ -16,18 +17,18 @@ export default function Home() {
   }
 
   useEffect(() => {
-    const timer = setInterval(() => updateSlide(1), 5000)
-    return () => clearInterval(timer)
+    const timer = window.setInterval(() => updateSlide(1), 5000)
+    return () => window.clearInterval(timer)
   }, [])
 
-  return (
-    <div className="home-page">
-      <Header />
+  const currentClass = gameClasses[active]
 
+  return (
+    <PublicLayout variant="home">
       <main className="home-container">
         <div className="tech-circle" aria-hidden="true">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div className="circle" key={index}></div>
+            <div className="circle" key={index} />
           ))}
         </div>
 
@@ -39,8 +40,17 @@ export default function Home() {
               </div>
 
               <div className="content">
-                <p className="product-tag">{gameClass.name}</p>
+                <p className="product-tag">Classe em destaque</p>
+                <h1>{gameClass.name}</h1>
                 <p className="description">{gameClass.description}</p>
+                <div className="home-actions">
+                  <Link className="home-action-button primary" to="/register">
+                    Criar conta
+                  </Link>
+                  <Link className="home-action-button secondary" to="/login">
+                    Entrar
+                  </Link>
+                </div>
               </div>
             </article>
           ))}
@@ -48,16 +58,17 @@ export default function Home() {
 
         <div className="arrows">
           <button className="arrow-btn" type="button" aria-label="Classe anterior" onClick={() => updateSlide(-1)}>
-            <i className="bx bx-left-arrow-alt"></i>
+            <i className="bx bx-left-arrow-alt" />
           </button>
 
           <button className="arrow-btn" type="button" aria-label="Próxima classe" onClick={() => updateSlide(1)}>
-            <i className="bx bx-right-arrow-alt"></i>
+            <i className="bx bx-right-arrow-alt" />
           </button>
         </div>
 
         <div className="indicators">
           <div className="numbers">{String(active + 1).padStart(2, '0')}</div>
+          <p className="current-class">{currentClass.name}</p>
           <div className="dots" aria-label="Selecionar classe">
             {gameClasses.map((gameClass, index) => (
               <button
@@ -66,11 +77,11 @@ export default function Home() {
                 type="button"
                 aria-label={`Ir para ${gameClass.name}`}
                 onClick={() => setActive(index)}
-              ></button>
+              />
             ))}
           </div>
         </div>
       </main>
-    </div>
+    </PublicLayout>
   )
 }
