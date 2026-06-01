@@ -1,0 +1,584 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #000;
+  color: aliceblue;
+  font-family: 'Roboto', Arial, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.site-header {
+  position: fixed;
+  width: min(90vw, 1320px);
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 20px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 20;
+  color: #fff;
+  background-color: transparent;
+}
+
+.logo {
+  font-family: 'Rubik Mono One', monospace;
+  font-size: clamp(1rem, 2.3vw, 2rem);
+  font-weight: 900;
+  color: rgb(240, 241, 247);
+  text-shadow: 0 0 10px rgb(10, 10, 10);
+}
+
+.site-header nav ul {
+  display: flex;
+  gap: clamp(16px, 3vw, 48px);
+  align-items: center;
+  padding: 0;
+  margin: 0;
+}
+
+.site-header nav li {
+  cursor: pointer;
+  position: relative;
+  padding: 5px 0;
+  color: white;
+  font-weight: 600;
+  list-style: none;
+}
+
+.site-header nav li::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background-color: #ffffff;
+  transition: width 0.35s ease;
+}
+
+.site-header nav li:hover::after,
+.site-header nav a.active::after {
+  width: 100%;
+}
+
+.home-container {
+  min-height: 100vh;
+  position: relative;
+  background:
+    linear-gradient(135deg, rgba(0, 0, 0, 0.64) 0%, rgba(8, 14, 52, 0.92) 100%),
+    url('/images/1920x1080-hd-space-ab4lm018jxlopn1i.jpg') center / cover;
+  overflow: hidden;
+}
+
+.home-container::before {
+  content: '';
+  position: absolute;
+  width: min(42vw, 520px);
+  height: min(42vw, 520px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 247, 255, 0.72) 0%, rgba(8, 0, 255, 0.42) 70%);
+  top: 52%;
+  left: 45%;
+  transform: translate(-50%, -50%);
+  filter: blur(48px);
+  z-index: 0;
+  animation: pulse 2.6s infinite alternate;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.4;
+    transform: translate(-50%, -50%) scale(0.84);
+  }
+  100% {
+    opacity: 0.92;
+    transform: translate(-50%, -50%) scale(1.22);
+  }
+}
+
+.list {
+  width: min(82%, 1280px);
+  min-height: 100vh;
+  margin: 0 auto;
+  position: relative;
+}
+
+.item {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(250px, 0.9fr) minmax(320px, 1fr);
+  gap: clamp(24px, 5vw, 80px);
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transform: translateX(100vw);
+  transition:
+    transform 0.7s ease-in-out,
+    opacity 0.7s ease-in-out;
+  padding-top: 70px;
+}
+
+.item.active {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.product-img {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+.product-img img {
+  max-width: min(520px, 100%);
+  max-height: min(70vh, 620px);
+  object-fit: contain;
+  filter: drop-shadow(0 0 30px rgba(0, 247, 255, 0.42));
+  transform: translateX(200px);
+  opacity: 0;
+  transition:
+    transform 0.6s ease,
+    opacity 0.6s ease;
+}
+
+.item.active .product-img img {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.content {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 2;
+  flex-direction: column;
+}
+
+.product-tag {
+  font-size: clamp(0.82rem, 1.5vw, 1rem);
+  text-transform: uppercase;
+  color: #99f6e4;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.content h1 {
+  margin: 0;
+  font-family: 'Rubik Mono One', monospace;
+  font-size: clamp(2.4rem, 6vw, 5.8rem);
+  line-height: 1.05;
+  color: white;
+  text-shadow: 0 0 22px rgba(0, 0, 0, 0.85);
+}
+
+.description {
+  font-size: clamp(1rem, 1.45vw, 1.25rem);
+  color: #f6f4df;
+  line-height: 1.65;
+  margin: 22px 0 28px;
+  max-width: 680px;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.home-action-button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-weight: 800;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    border 0.25s ease;
+}
+
+.home-action-button.primary {
+  background: #fff;
+  color: #020617;
+}
+
+.home-action-button.secondary {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  color: white;
+}
+
+.home-action-button:hover {
+  background: rgba(103, 232, 249, 0.24);
+  color: white;
+}
+
+.arrows {
+  position: absolute;
+  width: 90%;
+  display: flex;
+  justify-content: space-between;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.arrow-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: rgba(30, 41, 59, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  pointer-events: auto;
+}
+
+.arrow-btn:hover {
+  background-color: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+}
+
+.indicators {
+  position: absolute;
+  bottom: 34px;
+  left: 50%;
+  transform: translate(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 5;
+}
+
+.numbers {
+  font-family: 'Rubik Mono One', monospace;
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.current-class {
+  margin: 0;
+  font-weight: 800;
+  color: white;
+}
+
+.dots {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 680px;
+}
+
+.dot {
+  width: 40px;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.24);
+  border-radius: 2px;
+  border: 0;
+}
+
+.dot.active {
+  background-color: #00f7ff;
+  box-shadow: 0 0 10px rgba(0, 247, 255, 0.5);
+}
+
+.tech-circle {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.circle {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 247, 255, 0.2);
+}
+
+.circle:nth-child(1) {
+  width: 200px;
+  height: 200px;
+  top: 10%;
+  left: 10%;
+}
+
+.circle:nth-child(2) {
+  width: 300px;
+  height: 300px;
+  top: 80%;
+  left: 10%;
+}
+
+.circle:nth-child(3) {
+  width: 500px;
+  height: 500px;
+  top: 30%;
+  left: 80%;
+}
+
+.circle:nth-child(4) {
+  width: 200px;
+  height: 200px;
+  top: 10%;
+  left: 40%;
+}
+
+.circle:nth-child(5) {
+  width: 200px;
+  height: 200px;
+  top: 60%;
+  left: 50%;
+}
+
+.circle:nth-child(6) {
+  width: 200px;
+  height: 200px;
+  top: 10%;
+  left: 70%;
+}
+
+.auth-page-shell {
+  min-height: 100vh;
+  background:
+    linear-gradient(135deg, rgba(4, 7, 17, 0.86), rgba(15, 23, 42, 0.58)),
+    url('/images/imagem.png') center / cover fixed;
+  color: white;
+}
+
+.auth-main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 116px 20px 44px;
+  position: relative;
+}
+
+.auth-main::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(12, 18, 44, 0.5), rgba(22, 42, 63, 0.28));
+  z-index: 0;
+}
+
+.auth-label {
+  display: block;
+  margin-bottom: 8px;
+  padding-left: 8px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.legal-page {
+  min-height: 100vh;
+  padding: 132px 20px 56px;
+  background:
+    linear-gradient(135deg, rgba(0, 0, 0, 0.82), rgba(8, 14, 52, 0.92)),
+    url('/images/1920x1080-hd-space-ab4lm018jxlopn1i.jpg') center / cover fixed;
+}
+
+.legal-hero {
+  width: min(100%, 960px);
+  margin: 0 auto;
+}
+
+.legal-kicker {
+  margin: 0 0 10px;
+  color: #99f6e4;
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.legal-hero h1 {
+  margin: 0;
+  font-family: 'Rubik Mono One', monospace;
+  font-size: clamp(2rem, 6vw, 4rem);
+  line-height: 1.12;
+}
+
+.legal-hero p {
+  max-width: 780px;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.legal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.legal-actions a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px 18px;
+  font-weight: 800;
+  color: #fff;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.legal-actions a:hover {
+  border-color: rgba(153, 246, 228, 0.9);
+  background: rgba(153, 246, 228, 0.18);
+}
+
+.legal-notice {
+  width: min(100%, 960px);
+  margin: 28px auto 0;
+  border-left: 3px solid rgba(153, 246, 228, 0.65);
+  background: rgba(15, 23, 42, 0.68);
+  padding: 12px 16px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.94rem;
+}
+
+.legal-content {
+  width: min(100%, 960px);
+  margin: 28px auto 0;
+  display: grid;
+  gap: 14px;
+}
+
+.legal-section {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.72);
+  padding: clamp(18px, 4vw, 26px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.legal-section h2 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.legal-section p {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.76);
+  line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .site-header {
+    align-items: flex-start;
+    gap: 16px;
+    flex-direction: column;
+  }
+
+  .site-header nav ul {
+    flex-wrap: wrap;
+    gap: 12px 22px;
+  }
+
+  .item {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 12px;
+    padding: 138px 10px 120px;
+  }
+
+  .product-img {
+    height: auto;
+  }
+
+  .product-img img {
+    max-height: 34vh;
+  }
+
+  .content {
+    align-items: center;
+  }
+
+  .description {
+    max-width: 94vw;
+    margin: 16px 0 20px;
+  }
+
+  .arrows {
+    top: auto;
+    bottom: 82px;
+  }
+
+  .indicators {
+    bottom: 16px;
+  }
+}
+
+@media (max-width: 520px) {
+  .logo {
+    font-size: 1rem;
+  }
+
+  .content h1 {
+    font-size: 2rem;
+  }
+
+  .description {
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .home-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .home-action-button {
+    min-width: 132px;
+  }
+}

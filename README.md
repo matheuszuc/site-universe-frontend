@@ -1,15 +1,16 @@
-# Site Universe — React + Tailwind
+# Site Universe - React + Tailwind
 
-Migração inicial do projeto HTML/CSS/JS para React com Vite, Tailwind CSS e React Router.
+Frontend publico inicial do Site Universe, preparado para integracao futura com backend.
 
-## O que foi migrado
+## Stack
 
-- Home com carrossel de classes/personagens
-- Login visual
-- Registro com validação em React
-- Header reutilizável
-- Imagens centralizadas em `public/images`
-- CSS original reaproveitado e reorganizado para evitar conflitos
+- React
+- Vite
+- TypeScript
+- Tailwind CSS
+- React Router
+- React Hook Form
+- Zod
 
 ## Como rodar
 
@@ -18,23 +19,20 @@ npm install
 npm run dev
 ```
 
-Depois abra o endereço mostrado pelo Vite no terminal.
+Depois abra o endereco mostrado pelo Vite no terminal.
 
 ## Rotas
 
-- `/` — Home
-- `/login` — Login
-- `/registro` — Registro
+- `/` - Home
+- `/login` - Login
+- `/register` - Registro
+- `/verify-email` - Verificacao de e-mail
+- `/forgot-password` - Recuperacao de senha
+- `/reset-password` - Redefinicao de senha
+- `*` - NotFound
 
-## Próximos passos recomendados
+## Escopo
 
-1. Ajustar responsividade fina da Home.
-2. Criar o painel do usuário em `/painel`.
-3. Separar componentes de formulário, botão e cards.
-4. Conectar login/registro com API real.
-5. Implementar autenticação segura no backend.
-6. Depois integrar pagamento, webhooks e recompensas no jogo.
+Este modulo contem somente telas publicas, validacoes visuais e funcoes placeholder para futura API. O frontend nao salva token, nao salva senha, nao faz hash de senha, nao envia e-mail diretamente e nao implementa pagamento, recompensa, saldo, banco de dados ou regra sensivel.
 
-## Observação importante
-
-Login e Registro ainda são somente front-end. Não confie em validação do front-end para segurança real. Senha, sessão, token, pagamento e recompensa precisam ser validados no backend.
+Toda autenticacao real, sessao, validacao de token, envio de e-mail, rate limit, logs, permissoes e hash seguro de senha devem ser implementados no backend.
