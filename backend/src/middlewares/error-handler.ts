@@ -14,6 +14,7 @@ const fastifySafeErrorByStatus: Record<number, { code: SafeErrorCode; message: s
   403: { code: "FORBIDDEN", message: "Acesso negado." },
   404: { code: "NOT_FOUND", message: "Recurso não encontrado." },
   409: { code: "CONFLICT", message: "Conflito ao processar requisição." },
+  429: { code: "RATE_LIMITED", message: "Muitas requisições. Tente novamente em instantes." },
   415: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Tipo de conteúdo não suportado." }
 };
 

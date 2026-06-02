@@ -48,6 +48,10 @@ export class SessionsService {
     await sessionsRepository.revoke(session.id, reason);
     return session;
   }
+
+  setCsrfTokenHash(sessionId: string, csrfTokenHash: string) {
+    return sessionsRepository.setCsrfTokenHash(sessionId, csrfTokenHash);
+  }
 }
 
 export const sessionsService = new SessionsService();

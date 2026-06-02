@@ -13,15 +13,19 @@ type RecordSecurityEventInput = {
 
 export class SecurityEventsService {
   async record(input: RecordSecurityEventInput) {
-    await prisma.securityEvent.create({
-      data: {
-        userId: input.userId ?? null,
-        eventType: input.eventType,
-        ipHash: tokenService.hashOptionalValue(input.ip),
-        userAgent: input.userAgent ?? null,
-        metadata: input.metadata ?? undefined
-      }
-    });
+    try {
+      await prisma.securityEvent.create({
+        data: {
+          userId: input.userId ?? null,
+          eventType: input.eventType,
+          ipHash: tokenService.hashOptionalValue(input.ip),
+          userAgent: input.userAgent ?? null,
+          metadata: input.metadata ?? undefined
+        }
+      });
+    } catch (error) {
+      console.warn("Failed to record security event", error);
+    }
   }
 }
 

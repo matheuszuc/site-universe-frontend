@@ -24,18 +24,18 @@ export class UsersRepository {
       where: { id },
       data: {
         failedLoginCount: 0,
+        lockedUntil: null,
         lastLoginAt: new Date()
       }
     });
   }
 
-  incrementFailedLogin(id: string) {
+  recordLoginFailure(id: string, failedLoginCount: number, lockedUntil: Date | null) {
     return prisma.user.update({
       where: { id },
       data: {
-        failedLoginCount: {
-          increment: 1
-        }
+        failedLoginCount,
+        lockedUntil
       }
     });
   }

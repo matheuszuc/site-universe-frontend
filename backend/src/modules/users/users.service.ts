@@ -14,8 +14,8 @@ export class UsersService {
     return usersRepository.updateLoginSuccess(id);
   }
 
-  markLoginFailed(id: string) {
-    return usersRepository.incrementFailedLogin(id);
+  markLoginFailed(id: string, failedLoginCount: number, lockedUntil: Date | null) {
+    return usersRepository.recordLoginFailure(id, failedLoginCount, lockedUntil);
   }
 }
 
