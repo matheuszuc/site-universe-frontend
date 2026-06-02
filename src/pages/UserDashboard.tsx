@@ -1,45 +1,44 @@
-import { useEffect, useState } from 'react'
 import AccountSummaryCard from '../features/user-panel/components/AccountSummaryCard'
 import ActivityHistory from '../features/user-panel/components/ActivityHistory'
 import BalanceCard from '../features/user-panel/components/BalanceCard'
 import EmailVerificationCard from '../features/user-panel/components/EmailVerificationCard'
 import QuickActions from '../features/user-panel/components/QuickActions'
-import { getUserPanelData } from '../features/user-panel/services/userPanelService'
-import type { UserPanelData } from '../features/user-panel/types/userPanelTypes'
+import { userPanelMock } from '../features/user-panel/mocks/userPanelMock'
+import type { AccountStatus, UserPanelData } from '../features/user-panel/types/userPanelTypes'
 import AuthenticatedLayout from '../layouts/AuthenticatedLayout'
+import { useAuth } from '../contexts/AuthContext'
+import type { AuthUser } from '../features/auth/types/authTypes'
+
+function getAccountStatus(user: AuthUser): AccountStatus {
+  if (!user.emailVerified || user.status === 'pending_verification') {
+    return 'pending_verification'
+  }
+
+  if (user.status !== 'active') {
+    return 'restricted'
+  }
+
+  return 'active'
+}
+
+function buildPanelData(user: AuthUser): UserPanelData {
+  return {
+    ...userPanelMock,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      accountStatus: getAccountStatus(user),
+      emailVerified: user.emailVerified,
+    },
+  }
+}
 
 export default function UserDashboard() {
-  const [panelData, setPanelData] = useState<UserPanelData>()
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string>()
-
-  useEffect(() => {
-    let isMounted = true
-
-    async function loadPanelData() {
-      try {
-        const data = await getUserPanelData()
-
-        if (isMounted) {
-          setPanelData(data)
-        }
-      } catch {
-        if (isMounted) {
-          setError('Não foi possível carregar os dados do painel.')
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
-      }
-    }
-
-    loadPanelData()
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
+  const { user } = useAuth()
+  const panelData = user ? buildPanelData(user) : null
 
   return (
     <AuthenticatedLayout>
@@ -48,20 +47,14 @@ export default function UserDashboard() {
           <p className="panel-hero-kicker">Site Universe</p>
           <h1>Painel do jogador</h1>
           <p>
-            Acompanhe dados de conta, status de e-mail, saldo informativo e atividades em um
-            painel preparado para integração futura com backend.
+            Acompanhe os dados reais da sua conta, o status de verificação do e-mail e atalhos
+            informativos da área do jogador.
           </p>
         </section>
 
-        {isLoading && (
+        {!panelData && (
           <div className="panel-state" role="status">
             Carregando painel...
-          </div>
-        )}
-
-        {error && (
-          <div className="panel-state panel-state-error" role="alert">
-            {error}
           </div>
         )}
 

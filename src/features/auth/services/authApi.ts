@@ -1,70 +1,157 @@
+import { apiRequest } from '../../../services/api'
+import { formMessages } from '../../../utils/formMessages'
 import type {
   AuthApiResult,
+  AuthUser,
   ForgotPasswordFormValues,
   LoginFormValues,
   RegisterFormValues,
   ResetPasswordFormValues,
 } from '../types/authTypes'
-import { formMessages } from '../../../utils/formMessages'
 
-const visualDelay = 550
-
-function waitForVisualFeedback() {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, visualDelay)
-  })
+type AuthUserResponse = {
+  user: AuthUser
 }
 
-/*
-  TODO: integrar com backend real.
-  A senha NÃO deve ser hasheada no frontend.
-  O backend será responsável por validar a senha, aplicar hash seguro com
-  Argon2id/bcrypt e salvar apenas o hash.
+type SuccessResponse = {
+  success: true
+  message: string
+}
 
-  Futuramente o backend também deve validar autenticação, sessão, CSRF,
-  rate limit, permissões, tokens de e-mail de uso único e logs de tentativa.
-*/
-export async function loginUser(_payload: LoginFormValues): Promise<AuthApiResult> {
-  await waitForVisualFeedback()
+type CsrfResponse = {
+  csrfToken: string
+}
 
+function toResult(response: SuccessResponse, fallbackMessage: string): AuthApiResult {
   return {
     ok: true,
-    message: 'Login enviado com sucesso.',
+    message: response.message || fallbackMessage,
   }
 }
 
-export async function registerUser(_payload: RegisterFormValues): Promise<AuthApiResult> {
-  await waitForVisualFeedback()
+export const authApi = {
+  async login(payload: LoginFormValues) {
+    const response = await apiRequest<AuthUserResponse>('/auth/login', {
+      method: 'POST',
+      body: payload,
+    })
 
+    return response.user
+  },
+
+  async register(payload: RegisterFormValues) {
+    const response = await apiRequest<AuthUserResponse>('/auth/register', {
+      method: 'POST',
+      body: {
+        name: payload.username,
+        email: payload.email,
+        password: payload.password,
+      },
+    })
+
+    return response.user
+  },
+
+  async me() {
+    const response = await apiRequest<AuthUserResponse>('/auth/me')
+    return response.user
+  },
+
+  async getCsrfToken() {
+    const response = await apiRequest<CsrfResponse>('/auth/csrf')
+    return response.csrfToken
+  },
+
+  async logout() {
+    const csrfToken = await this.getCsrfToken()
+
+    await apiRequest<{ success: true }>('/auth/logout', {
+      method: 'POST',
+      headers: {
+        'X-CSRF-Token': csrfToken,
+      },
+    })
+  },
+
+  async resendVerification(email: string) {
+    const response = await apiRequest<SuccessResponse>('/auth/resend-verification', {
+      method: 'POST',
+      body: { email },
+    })
+
+    return toResult(response, formMessages.resendVerification)
+  },
+
+  async verifyEmail(token: string) {
+    const response = await apiRequest<SuccessResponse>(
+      `/auth/verify-email?token=${encodeURIComponent(token)}`,
+    )
+
+    return toResult(response, 'E-mail verificado com sucesso.')
+  },
+
+  async forgotPassword(email: string) {
+    const response = await apiRequest<SuccessResponse>('/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+    })
+
+    return toResult(response, formMessages.forgotPassword)
+  },
+
+  async resetPassword(token: string, password: string) {
+    const response = await apiRequest<SuccessResponse>('/auth/reset-password', {
+      method: 'POST',
+      body: { token, password },
+    })
+
+    return toResult(response, 'Senha redefinida com sucesso.')
+  },
+}
+
+export async function loginUser(payload: LoginFormValues): Promise<AuthApiResult> {
+  await authApi.login(payload)
+  return {
+    ok: true,
+    message: 'Login realizado com sucesso.',
+  }
+}
+
+export async function registerUser(payload: RegisterFormValues): Promise<AuthApiResult> {
+  await authApi.register(payload)
   return {
     ok: true,
     message: 'Cadastro recebido. Verifique seu e-mail para continuar.',
   }
 }
 
-export async function resendVerificationEmail(_email?: string): Promise<AuthApiResult> {
-  await waitForVisualFeedback()
-
-  return {
-    ok: true,
-    message: formMessages.resendVerification,
+export async function resendVerificationEmail(email?: string): Promise<AuthApiResult> {
+  if (!email) {
+    return {
+      ok: false,
+      message: 'Informe o e-mail para reenviar a verificação.',
+    }
   }
+
+  return authApi.resendVerification(email)
 }
 
-export async function requestPasswordReset(_payload: ForgotPasswordFormValues): Promise<AuthApiResult> {
-  await waitForVisualFeedback()
-
-  return {
-    ok: true,
-    message: formMessages.forgotPassword,
-  }
+export async function requestPasswordReset(
+  payload: ForgotPasswordFormValues,
+): Promise<AuthApiResult> {
+  return authApi.forgotPassword(payload.email)
 }
 
-export async function resetPassword(_payload: ResetPasswordFormValues, _token?: string | null): Promise<AuthApiResult> {
-  await waitForVisualFeedback()
-
-  return {
-    ok: true,
-    message: 'Senha redefinida com sucesso.',
+export async function resetPassword(
+  payload: ResetPasswordFormValues,
+  token?: string | null,
+): Promise<AuthApiResult> {
+  if (!token) {
+    return {
+      ok: false,
+      message: 'Token inválido ou expirado.',
+    }
   }
+
+  return authApi.resetPassword(token, payload.password)
 }

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { formMessages } from '../../../utils/formMessages'
 
-const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^\sA-Za-z0-9])\S{8,}$/
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\sA-Za-z0-9])\S{8,64}$/
 
 export const resetPasswordSchema = z
   .object({

@@ -3,7 +3,7 @@ import { z } from "zod";
 const passwordSchema = z
   .string()
   .min(8)
-  .max(128)
+  .max(64)
   .regex(/[a-z]/, "Password must contain at least one lowercase letter")
   .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
   .regex(/[0-9]/, "Password must contain at least one number")
@@ -17,7 +17,7 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   email: z.string().trim().email(),
-  password: z.string().min(1).max(128)
+  password: z.string().min(1).max(64)
 });
 
 export const emailOnlySchema = z.object({

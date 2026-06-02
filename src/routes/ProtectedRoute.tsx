@@ -1,18 +1,29 @@
 import type { ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 type ProtectedRouteProps = {
   children: ReactNode
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  // Controle visual temporário para montar a área logada.
-  // O frontend não protege sozinho área sensível e não deve confiar em localStorage como segurança real.
-  // Backend será responsável por autenticação, autorização, saldo, pagamentos e recompensas.
-  const isVisuallyAuthenticated = true
+  const { isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
 
-  if (!isVisuallyAuthenticated) {
-    return <Navigate to="/login" replace />
+  if (isLoading) {
+    return (
+      <div className="panel-shell">
+        <main className="panel-main">
+          <div className="panel-state" role="status">
+            Validando sessão...
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate replace state={{ from: location }} to="/login" />
   }
 
   return children

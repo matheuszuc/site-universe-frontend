@@ -10,12 +10,14 @@ import Alert from '../components/ui/Alert'
 import LoadingButton from '../components/ui/LoadingButton'
 import PasswordInput from '../components/ui/PasswordInput'
 import { resetPasswordSchema } from '../features/auth/schemas/resetPasswordSchema'
-import { resetPassword } from '../features/auth/services/authApi'
+import { authApi } from '../features/auth/services/authApi'
 import type { ResetPasswordFormValues } from '../features/auth/types/authTypes'
+import { getApiErrorMessage } from '../services/api'
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams()
   const [message, setMessage] = useState<string>()
+  const [errorMessage, setErrorMessage] = useState<string>()
   const token = searchParams.get('token')
   const {
     formState: { errors, isSubmitting },
@@ -30,8 +32,20 @@ export default function ResetPassword() {
   })
 
   async function onSubmit(values: ResetPasswordFormValues) {
-    const result = await resetPassword(values, token)
-    setMessage(result.message)
+    setMessage(undefined)
+    setErrorMessage(undefined)
+
+    if (!token) {
+      setErrorMessage('Token inválido ou expirado.')
+      return
+    }
+
+    try {
+      const result = await authApi.resetPassword(token, values.password)
+      setMessage(result.message)
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error))
+    }
   }
 
   return (
@@ -44,7 +58,9 @@ export default function ResetPassword() {
           />
 
           <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
+            {!token && <Alert tone="error">Token inválido ou expirado.</Alert>}
             {message && <Alert tone="success">{message}</Alert>}
+            {errorMessage && <Alert tone="error">{errorMessage}</Alert>}
 
             <div>
               <label className="auth-label" htmlFor="password">
@@ -74,7 +90,13 @@ export default function ResetPassword() {
               <FormError id="confirmPassword-error" message={errors.confirmPassword?.message} />
             </div>
 
-            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText="Preparando..." type="submit">
+            <LoadingButton
+              className="w-full"
+              disabled={!token}
+              isLoading={isSubmitting}
+              loadingText="Redefinindo..."
+              type="submit"
+            >
               Redefinir senha
             </LoadingButton>
 

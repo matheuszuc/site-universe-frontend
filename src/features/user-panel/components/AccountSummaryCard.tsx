@@ -18,7 +18,7 @@ export default function AccountSummaryCard({ user }: AccountSummaryCardProps) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="panel-card-kicker">Conta</p>
-          <h2 className="panel-card-title">{user.username}</h2>
+          <h2 className="panel-card-title">{user.name}</h2>
         </div>
         <StatusBadge status={user.accountStatus} />
       </div>
@@ -27,6 +27,10 @@ export default function AccountSummaryCard({ user }: AccountSummaryCardProps) {
         <div>
           <dt className="text-white/55">E-mail</dt>
           <dd className="mt-1 font-semibold text-white">{user.email}</dd>
+        </div>
+        <div>
+          <dt className="text-white/55">Perfil</dt>
+          <dd className="mt-1 font-semibold text-white">{user.role}</dd>
         </div>
         <div>
           <dt className="text-white/55">Status da conta</dt>

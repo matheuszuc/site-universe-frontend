@@ -63,7 +63,7 @@ const emailVerificationGenericResponse: SuccessResponse = {
 
 const forgotPasswordGenericResponse: SuccessResponse = {
   success: true,
-  message: "Se este e-mail existir, enviaremos instruções para redefinir a senha."
+  message: "Se este e-mail existir, enviaremos instruções para redefinir sua senha."
 };
 
 function getSafeUser(user: User): AuthenticatedUser {

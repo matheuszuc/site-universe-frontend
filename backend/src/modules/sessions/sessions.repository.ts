@@ -78,6 +78,21 @@ export class SessionsRepository {
       }
     });
   }
+
+  revokeExpired(now = new Date(), reason = "expired") {
+    return prisma.session.updateMany({
+      where: {
+        revokedAt: null,
+        expiresAt: {
+          lte: now
+        }
+      },
+      data: {
+        revokedAt: now,
+        revokedReason: reason
+      }
+    });
+  }
 }
 
 export const sessionsRepository = new SessionsRepository();

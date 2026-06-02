@@ -56,6 +56,10 @@ export class SessionsService {
   revokeActiveSessionsForUser(userId: string, reason: string) {
     return sessionsRepository.revokeActiveByUserId(userId, reason);
   }
+
+  cleanupExpiredSessions(now = new Date()) {
+    return sessionsRepository.revokeExpired(now, "expired");
+  }
 }
 
 export const sessionsService = new SessionsService();
