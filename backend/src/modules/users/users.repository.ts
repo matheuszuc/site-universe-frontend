@@ -39,6 +39,27 @@ export class UsersRepository {
       }
     });
   }
+
+  markEmailVerified(id: string, verifiedAt: Date) {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        emailVerifiedAt: verifiedAt,
+        status: "active"
+      }
+    });
+  }
+
+  updatePasswordAfterReset(id: string, passwordHash: string) {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        passwordHash,
+        failedLoginCount: 0,
+        lockedUntil: null
+      }
+    });
+  }
 }
 
 export const usersRepository = new UsersRepository();

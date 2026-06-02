@@ -20,6 +20,19 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(128)
 });
 
+export const emailOnlySchema = z.object({
+  email: z.string().trim().email()
+});
+
+export const verifyEmailQuerySchema = z.object({
+  token: z.string().min(32)
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(32),
+  password: passwordSchema
+});
+
 export const authCookieSchema = z.object({
   sessionToken: z.string().min(32)
 });
@@ -35,4 +48,7 @@ export const authenticatedUserSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type EmailOnlyInput = z.infer<typeof emailOnlySchema>;
+export type VerifyEmailQuery = z.infer<typeof verifyEmailQuerySchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type AuthenticatedUser = z.infer<typeof authenticatedUserSchema>;

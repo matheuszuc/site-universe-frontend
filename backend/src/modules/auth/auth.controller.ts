@@ -46,6 +46,33 @@ export async function logoutController(request: FastifyRequest, reply: FastifyRe
     .send({ success: true });
 }
 
+export async function resendVerificationController(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const result = await authService.resendVerification(request.body, getRequestInfo(request));
+
+  reply.send(result);
+}
+
+export async function verifyEmailController(request: FastifyRequest, reply: FastifyReply) {
+  const result = await authService.verifyEmail(request.query, getRequestInfo(request));
+
+  reply.send(result);
+}
+
+export async function forgotPasswordController(request: FastifyRequest, reply: FastifyReply) {
+  const result = await authService.forgotPassword(request.body, getRequestInfo(request));
+
+  reply.send(result);
+}
+
+export async function resetPasswordController(request: FastifyRequest, reply: FastifyReply) {
+  const result = await authService.resetPassword(request.body, getRequestInfo(request));
+
+  reply.send(result);
+}
+
 export async function csrfController(request: FastifyRequest, reply: FastifyReply) {
   const sessionToken = request.cookies[sessionCookieName];
   const csrfToken = await authService.issueCsrfToken(sessionToken, getRequestInfo(request));

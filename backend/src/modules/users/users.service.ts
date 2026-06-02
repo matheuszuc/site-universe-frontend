@@ -17,6 +17,14 @@ export class UsersService {
   markLoginFailed(id: string, failedLoginCount: number, lockedUntil: Date | null) {
     return usersRepository.recordLoginFailure(id, failedLoginCount, lockedUntil);
   }
+
+  markEmailVerified(id: string, verifiedAt: Date) {
+    return usersRepository.markEmailVerified(id, verifiedAt);
+  }
+
+  updatePasswordAfterReset(id: string, passwordHash: string) {
+    return usersRepository.updatePasswordAfterReset(id, passwordHash);
+  }
 }
 
 export const usersService = new UsersService();

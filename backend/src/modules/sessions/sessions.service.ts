@@ -52,6 +52,10 @@ export class SessionsService {
   setCsrfTokenHash(sessionId: string, csrfTokenHash: string) {
     return sessionsRepository.setCsrfTokenHash(sessionId, csrfTokenHash);
   }
+
+  revokeActiveSessionsForUser(userId: string, reason: string) {
+    return sessionsRepository.revokeActiveByUserId(userId, reason);
+  }
 }
 
 export const sessionsService = new SessionsService();
