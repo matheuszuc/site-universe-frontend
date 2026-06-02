@@ -4,8 +4,11 @@ import type { UserPanelData } from '../types/userPanelTypes'
 // O frontend não decide saldo real, não credita recompensa e não confirma pagamento.
 export const userPanelMock: UserPanelData = {
   user: {
-    username: 'AventureiroUniverse',
+    id: 'mock-user',
+    name: 'AventureiroUniverse',
     email: 'jogador@exemplo.com',
+    role: 'user',
+    status: 'pending_verification',
     accountStatus: 'pending_verification',
     emailVerified: false,
   },

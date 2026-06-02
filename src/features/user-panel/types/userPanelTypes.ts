@@ -12,8 +12,11 @@ export type UserActivity = {
 
 export type UserPanelData = {
   user: {
-    username: string
+    id: string
+    name: string
     email: string
+    role: string
+    status: string
     accountStatus: AccountStatus
     emailVerified: boolean
   }

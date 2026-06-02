@@ -10,13 +10,15 @@ import Alert from '../components/ui/Alert'
 import Input from '../components/ui/Input'
 import LoadingButton from '../components/ui/LoadingButton'
 import PasswordInput from '../components/ui/PasswordInput'
+import { useAuth } from '../contexts/AuthContext'
 import { registerSchema } from '../features/auth/schemas/registerSchema'
-import { registerUser } from '../features/auth/services/authApi'
 import type { RegisterFormValues } from '../features/auth/types/authTypes'
+import { getApiErrorMessage } from '../services/api'
 
 export default function Register() {
+  const { register: registerAccount } = useAuth()
   const navigate = useNavigate()
-  const [message, setMessage] = useState<string>()
+  const [errorMessage, setErrorMessage] = useState<string>()
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -33,9 +35,14 @@ export default function Register() {
   })
 
   async function onSubmit(values: RegisterFormValues) {
-    const result = await registerUser(values)
-    setMessage(result.message)
-    navigate('/verify-email', { state: { email: values.email } })
+    setErrorMessage(undefined)
+
+    try {
+      await registerAccount(values)
+      navigate('/verify-email', { state: { email: values.email, mode: 'sent' } })
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error))
+    }
   }
 
   return (
@@ -48,7 +55,7 @@ export default function Register() {
           />
 
           <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
-            {message && <Alert tone="success">{message}</Alert>}
+            {errorMessage && <Alert tone="error">{errorMessage}</Alert>}
 
             <div>
               <label className="auth-label" htmlFor="username">
@@ -133,7 +140,7 @@ export default function Register() {
               <FormError message={errors.terms?.message} />
             </div>
 
-            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText="Preparando..." type="submit">
+            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText="Criando conta..." type="submit">
               Registrar
             </LoadingButton>
 

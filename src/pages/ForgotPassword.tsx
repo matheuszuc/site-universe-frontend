@@ -10,11 +10,13 @@ import Alert from '../components/ui/Alert'
 import Input from '../components/ui/Input'
 import LoadingButton from '../components/ui/LoadingButton'
 import { forgotPasswordSchema } from '../features/auth/schemas/forgotPasswordSchema'
-import { requestPasswordReset } from '../features/auth/services/authApi'
+import { authApi } from '../features/auth/services/authApi'
 import type { ForgotPasswordFormValues } from '../features/auth/types/authTypes'
+import { getApiErrorMessage } from '../services/api'
 
 export default function ForgotPassword() {
   const [message, setMessage] = useState<string>()
+  const [errorMessage, setErrorMessage] = useState<string>()
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -27,8 +29,15 @@ export default function ForgotPassword() {
   })
 
   async function onSubmit(values: ForgotPasswordFormValues) {
-    const result = await requestPasswordReset(values)
-    setMessage(result.message)
+    setMessage(undefined)
+    setErrorMessage(undefined)
+
+    try {
+      const result = await authApi.forgotPassword(values.email)
+      setMessage(result.message)
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error))
+    }
   }
 
   return (
@@ -42,6 +51,7 @@ export default function ForgotPassword() {
 
           <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
             {message && <Alert tone="success">{message}</Alert>}
+            {errorMessage && <Alert tone="error">{errorMessage}</Alert>}
 
             <div>
               <label className="auth-label" htmlFor="email">
@@ -58,7 +68,7 @@ export default function ForgotPassword() {
               <FormError id="email-error" message={errors.email?.message} />
             </div>
 
-            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText="Preparando..." type="submit">
+            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText="Enviando..." type="submit">
               Enviar instruções
             </LoadingButton>
 

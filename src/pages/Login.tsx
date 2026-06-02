@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import AuthCard from '../components/auth/AuthCard'
 import AuthHeader from '../components/auth/AuthHeader'
 import FormError from '../components/auth/FormError'
@@ -10,12 +10,22 @@ import Alert from '../components/ui/Alert'
 import Input from '../components/ui/Input'
 import LoadingButton from '../components/ui/LoadingButton'
 import PasswordInput from '../components/ui/PasswordInput'
-import { loginUser } from '../features/auth/services/authApi'
+import { useAuth } from '../contexts/AuthContext'
 import { loginSchema } from '../features/auth/schemas/loginSchema'
 import type { LoginFormValues } from '../features/auth/types/authTypes'
+import { getApiErrorMessage } from '../services/api'
+
+type LoginLocationState = {
+  from?: {
+    pathname?: string
+  }
+}
 
 export default function Login() {
-  const [message, setMessage] = useState<string>()
+  const { login } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [errorMessage, setErrorMessage] = useState<string>()
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -29,8 +39,15 @@ export default function Login() {
   })
 
   async function onSubmit(values: LoginFormValues) {
-    const result = await loginUser(values)
-    setMessage(result.message)
+    setErrorMessage(undefined)
+
+    try {
+      await login(values)
+      const redirectTo = ((location.state as LoginLocationState | null)?.from?.pathname) ?? '/painel'
+      navigate(redirectTo, { replace: true })
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error))
+    }
   }
 
   return (
@@ -43,7 +60,7 @@ export default function Login() {
           />
 
           <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
-            {message && <Alert tone="success">{message}</Alert>}
+            {errorMessage && <Alert tone="error">{errorMessage}</Alert>}
 
             <div>
               <label className="auth-label" htmlFor="email">
@@ -80,7 +97,7 @@ export default function Login() {
               </Link>
             </div>
 
-            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText="Preparando..." type="submit">
+            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText="Entrando..." type="submit">
               Login
             </LoadingButton>
 
