@@ -8,8 +8,8 @@ export const formMessages = {
   username:
     'Nome de usuário deve ter de 3 a 20 caracteres e conter apenas letras sem acento e números.',
   forgotPassword:
-    'Se este e-mail estiver cadastrado, enviaremos instruções para recuperação.',
+    'Se este e-mail existir, enviaremos instruções para redefinir sua senha.',
   resendVerification:
-    'Se houver uma conta pendente para este e-mail, enviaremos uma nova mensagem de verificação.',
+    'Se a conta existir e precisar de verificação, enviaremos as instruções.',
   invalidLogin: 'E-mail ou senha inválidos.',
 }
