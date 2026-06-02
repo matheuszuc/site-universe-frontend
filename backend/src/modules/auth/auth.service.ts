@@ -1,8 +1,10 @@
 import type { User } from "@prisma/client";
 
+import { env } from "../../config/env.js";
 import { getSessionCookieOptions } from "../../config/cookies.js";
 import { normalizeEmail } from "../../utils/normalize-email.js";
 import { sessionsService } from "../sessions/sessions.service.js";
+import { csrfService } from "../security/csrf.service.js";
 import { passwordService } from "../security/password.service.js";
 import { securityEventsService } from "../security/security-events.service.js";
 import { usersService } from "../users/users.service.js";
@@ -47,6 +49,18 @@ function getSafeUser(user: User): AuthenticatedUser {
 
 function isBlockedUserStatus(status: string) {
   return status === "suspended" || status === "deleted";
+}
+
+function isAccountLocked(user: User) {
+  return Boolean(user.lockedUntil && user.lockedUntil > new Date());
+}
+
+function getNextLockedUntil(failedLoginCount: number) {
+  if (failedLoginCount < env.LOGIN_ACCOUNT_LOCK_MAX_FAILURES) {
+    return null;
+  }
+
+  return new Date(Date.now() + env.LOGIN_ACCOUNT_LOCK_MINUTES * 60 * 1000);
 }
 
 export class AuthService {
@@ -97,22 +111,46 @@ export class AuthService {
       throw invalidCredentialsError;
     }
 
+    if (isAccountLocked(user)) {
+      await securityEventsService.record({
+        userId: user.id,
+        eventType: "LOGIN_BLOCKED_ACCOUNT_LOCKED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent
+      });
+      throw invalidCredentialsError;
+    }
+
     const passwordMatches = await passwordService.verifyPassword(
       user.passwordHash,
       parsedInput.password
     );
 
     if (!passwordMatches) {
-      await usersService.markLoginFailed(user.id);
+      const failedLoginCount = user.failedLoginCount + 1;
+      const lockedUntil = getNextLockedUntil(failedLoginCount);
+
+      await usersService.markLoginFailed(user.id, failedLoginCount, lockedUntil);
       await securityEventsService.record({
         userId: user.id,
         eventType: "LOGIN_FAILED",
         ip: requestInfo.ip,
         userAgent: requestInfo.userAgent,
         metadata: {
-          reason: "invalid_credentials"
+          reason: "invalid_credentials",
+          locked: Boolean(lockedUntil)
         }
       });
+
+      if (lockedUntil) {
+        await securityEventsService.record({
+          userId: user.id,
+          eventType: "LOGIN_BLOCKED_ACCOUNT_LOCKED",
+          ip: requestInfo.ip,
+          userAgent: requestInfo.userAgent
+        });
+      }
+
       throw invalidCredentialsError;
     }
 
@@ -146,14 +184,34 @@ export class AuthService {
     };
   }
 
-  async logout(sessionToken: string | undefined, requestInfo: RequestInfo) {
+  async logout(
+    sessionToken: string | undefined,
+    csrfToken: string | undefined,
+    requestInfo: RequestInfo
+  ) {
     const parsedCookie = authCookieSchema.safeParse({ sessionToken });
 
     if (!parsedCookie.success) {
       return;
     }
 
-    const session = await sessionsService.revokeSession(parsedCookie.data.sessionToken, "logout");
+    const session = await sessionsService.findValidSession(parsedCookie.data.sessionToken);
+
+    if (!session) {
+      return;
+    }
+
+    if (!csrfService.verifyToken(csrfToken, session.csrfTokenHash)) {
+      await securityEventsService.record({
+        userId: session.user.id,
+        eventType: "CSRF_FAILED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent
+      });
+      throw new AppError(403, "CSRF_FAILED", "Requisição não autorizada.");
+    }
+
+    await sessionsService.revokeSession(parsedCookie.data.sessionToken, "logout");
 
     if (session) {
       await securityEventsService.record({
@@ -163,6 +221,38 @@ export class AuthService {
         userAgent: requestInfo.userAgent
       });
     }
+  }
+
+  async issueCsrfToken(
+    sessionToken: string | undefined,
+    requestInfo: RequestInfo = {}
+  ): Promise<string> {
+    const parsedCookie = authCookieSchema.safeParse({ sessionToken });
+
+    if (!parsedCookie.success) {
+      throw new AppError(401, "UNAUTHORIZED", "Não autorizado.");
+    }
+
+    const session = await sessionsService.findValidSession(parsedCookie.data.sessionToken);
+
+    if (!session || isBlockedUserStatus(session.user.status)) {
+      await securityEventsService.record({
+        userId: session?.user.id ?? null,
+        eventType: "INVALID_SESSION",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent,
+        metadata: {
+          reason: session ? "blocked_status" : "session_not_found"
+        }
+      });
+      throw new AppError(401, "UNAUTHORIZED", "Não autorizado.");
+    }
+
+    const csrfToken = csrfService.generateToken();
+    await sessionsService.setCsrfTokenHash(session.id, csrfService.hashToken(csrfToken));
+    await sessionsService.touch(session.id);
+
+    return csrfToken;
   }
 
   async getCurrentUser(

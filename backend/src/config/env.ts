@@ -11,7 +11,15 @@ const envSchema = z.object({
   SESSION_COOKIE_NAME: z.string().min(1).default("site_universe_session"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
   EMAIL_VERIFICATION_TOKEN_TTL_HOURS: z.coerce.number().int().positive().default(24),
-  PASSWORD_RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(30)
+  PASSWORD_RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(30),
+  RATE_LIMIT_GLOBAL_MAX: z.coerce.number().int().positive().default(100),
+  RATE_LIMIT_GLOBAL_WINDOW: z.string().min(1).default("1 minute"),
+  LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  LOGIN_RATE_LIMIT_WINDOW: z.string().min(1).default("1 minute"),
+  LOGIN_ACCOUNT_LOCK_MAX_FAILURES: z.coerce.number().int().positive().default(5),
+  LOGIN_ACCOUNT_LOCK_MINUTES: z.coerce.number().int().positive().default(15),
+  REGISTER_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  REGISTER_RATE_LIMIT_WINDOW: z.string().min(1).default("10 minutes")
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

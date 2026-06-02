@@ -56,6 +56,15 @@ export class SessionsRepository {
       }
     });
   }
+
+  setCsrfTokenHash(sessionId: string, csrfTokenHash: string) {
+    return prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        csrfTokenHash
+      }
+    });
+  }
 }
 
 export const sessionsRepository = new SessionsRepository();

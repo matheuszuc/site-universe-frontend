@@ -13,6 +13,14 @@ function getRequestInfo(request: FastifyRequest) {
   };
 }
 
+function getSingleHeaderValue(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+
+  return value;
+}
+
 export async function registerController(request: FastifyRequest, reply: FastifyReply) {
   const user = await authService.register(request.body, getRequestInfo(request));
 
@@ -29,12 +37,20 @@ export async function loginController(request: FastifyRequest, reply: FastifyRep
 
 export async function logoutController(request: FastifyRequest, reply: FastifyReply) {
   const sessionToken = request.cookies[sessionCookieName];
+  const csrfToken = getSingleHeaderValue(request.headers["x-csrf-token"]);
 
-  await authService.logout(sessionToken, getRequestInfo(request));
+  await authService.logout(sessionToken, csrfToken, getRequestInfo(request));
 
   reply
     .clearCookie(sessionCookieName, getClearSessionCookieOptions())
     .send({ success: true });
+}
+
+export async function csrfController(request: FastifyRequest, reply: FastifyReply) {
+  const sessionToken = request.cookies[sessionCookieName];
+  const csrfToken = await authService.issueCsrfToken(sessionToken, getRequestInfo(request));
+
+  reply.send({ csrfToken });
 }
 
 export async function getMeController(request: FastifyRequest, reply: FastifyReply) {

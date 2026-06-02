@@ -1,6 +1,7 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 
 import { corsOptions } from "./config/cors.js";
@@ -18,9 +19,22 @@ export async function buildApp() {
 
   registerErrorHandler(app);
 
-  await app.register(helmet);
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    frameguard: {
+      action: "deny"
+    },
+    referrerPolicy: {
+      policy: "no-referrer"
+    }
+  });
   await app.register(cors, corsOptions);
   await app.register(cookie);
+  await app.register(rateLimit, {
+    global: true,
+    max: env.RATE_LIMIT_GLOBAL_MAX,
+    timeWindow: env.RATE_LIMIT_GLOBAL_WINDOW
+  });
   await app.register(requestIdMiddleware);
 
   app.get("/health", async () => {
