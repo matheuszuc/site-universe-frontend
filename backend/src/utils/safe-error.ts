@@ -1,9 +1,11 @@
 export type SafeErrorCode =
   | "BAD_REQUEST"
   | "UNAUTHORIZED"
+  | "INVALID_CREDENTIALS"
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "CONFLICT"
+  | "UNSUPPORTED_MEDIA_TYPE"
   | "INTERNAL_SERVER_ERROR";
 
 export class AppError extends Error {

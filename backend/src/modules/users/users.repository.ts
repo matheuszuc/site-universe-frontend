@@ -18,6 +18,27 @@ export class UsersRepository {
   create(data: Prisma.UserCreateInput) {
     return prisma.user.create({ data });
   }
+
+  updateLoginSuccess(id: string) {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        failedLoginCount: 0,
+        lastLoginAt: new Date()
+      }
+    });
+  }
+
+  incrementFailedLogin(id: string) {
+    return prisma.user.update({
+      where: { id },
+      data: {
+        failedLoginCount: {
+          increment: 1
+        }
+      }
+    });
+  }
 }
 
 export const usersRepository = new UsersRepository();

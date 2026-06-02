@@ -1,6 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
 
 export class TokenService {
+  generateSecureToken(bytes = 32) {
+    return this.generateOpaqueToken(bytes);
+  }
+
   generateOpaqueToken(bytes = 32) {
     return randomBytes(bytes).toString("base64url");
   }
