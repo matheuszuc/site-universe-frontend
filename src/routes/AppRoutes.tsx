@@ -7,7 +7,9 @@ import PrivacyPolicy from '../pages/PrivacyPolicy'
 import Register from '../pages/Register'
 import ResetPassword from '../pages/ResetPassword'
 import TermsOfUse from '../pages/TermsOfUse'
+import UserDashboard from '../pages/UserDashboard'
 import VerifyEmail from '../pages/VerifyEmail'
+import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRoutes() {
   return (
@@ -20,6 +22,14 @@ export default function AppRoutes() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/terms" element={<TermsOfUse />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route
+        path="/painel"
+        element={
+          <ProtectedRoute>
+            <UserDashboard />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<NotFound />} />
     </Routes>
   )
