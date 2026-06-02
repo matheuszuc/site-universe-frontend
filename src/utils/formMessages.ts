@@ -3,7 +3,7 @@ export const formMessages = {
   invalidEmail: 'Digite um e-mail válido.',
   requiredPassword: 'Senha obrigatória.',
   passwordStrength:
-    'A senha deve ter entre 8 e 128 caracteres, uma letra minúscula, uma letra maiúscula, um número, um caractere especial e não pode conter espaços.',
+    'A senha deve ter entre 8 e 64 caracteres e conter letra maiúscula, letra minúscula, número e caractere especial.',
   passwordConfirmation: 'A confirmação de senha deve ser igual à senha.',
   username:
     'Nome de usuário deve ter de 3 a 20 caracteres e conter apenas letras sem acento e números.',

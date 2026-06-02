@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { formMessages } from '../../../utils/formMessages'
 
 const usernameRegex = /^[A-Za-z0-9]+$/
-const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\sA-Za-z0-9])\S{8,128}$/
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\sA-Za-z0-9])\S{8,64}$/
 
 export const registerSchema = z
   .object({
