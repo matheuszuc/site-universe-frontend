@@ -9,6 +9,7 @@ export type SafeErrorCode =
   | "CONFLICT"
   | "RATE_LIMITED"
   | "UNSUPPORTED_MEDIA_TYPE"
+  | "INVALID_OR_EXPIRED_TOKEN"
   | "INTERNAL_SERVER_ERROR";
 
 export class AppError extends Error {

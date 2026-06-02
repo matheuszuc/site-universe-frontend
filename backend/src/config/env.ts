@@ -19,7 +19,11 @@ const envSchema = z.object({
   LOGIN_ACCOUNT_LOCK_MAX_FAILURES: z.coerce.number().int().positive().default(5),
   LOGIN_ACCOUNT_LOCK_MINUTES: z.coerce.number().int().positive().default(15),
   REGISTER_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
-  REGISTER_RATE_LIMIT_WINDOW: z.string().min(1).default("10 minutes")
+  REGISTER_RATE_LIMIT_WINDOW: z.string().min(1).default("10 minutes"),
+  PASSWORD_RESET_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  PASSWORD_RESET_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes"),
+  EMAIL_VERIFICATION_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  EMAIL_VERIFICATION_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes")
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

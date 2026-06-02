@@ -128,3 +128,48 @@ export async function registerRateLimit(request: FastifyRequest, _reply: Fastify
     throw buildRateLimitError("Muitas tentativas. Tente novamente em instantes.");
   }
 }
+
+export async function emailVerificationRateLimit(
+  request: FastifyRequest,
+  _reply: FastifyReply
+) {
+  const email = getEmailFromBody(request.body);
+  const keys = [`email-verification:ip:${request.ip}`];
+
+  if (email) {
+    keys.push(`email-verification:email:${email}`);
+  }
+
+  const allowed = keys.every((key) =>
+    consumeRateLimit({
+      key,
+      max: env.EMAIL_VERIFICATION_RATE_LIMIT_MAX,
+      window: env.EMAIL_VERIFICATION_RATE_LIMIT_WINDOW
+    })
+  );
+
+  if (!allowed) {
+    throw buildRateLimitError("Muitas tentativas. Tente novamente em instantes.");
+  }
+}
+
+export async function passwordResetRateLimit(request: FastifyRequest, _reply: FastifyReply) {
+  const email = getEmailFromBody(request.body);
+  const keys = [`password-reset:ip:${request.ip}`];
+
+  if (email) {
+    keys.push(`password-reset:email:${email}`);
+  }
+
+  const allowed = keys.every((key) =>
+    consumeRateLimit({
+      key,
+      max: env.PASSWORD_RESET_RATE_LIMIT_MAX,
+      window: env.PASSWORD_RESET_RATE_LIMIT_WINDOW
+    })
+  );
+
+  if (!allowed) {
+    throw buildRateLimitError("Muitas tentativas. Tente novamente em instantes.");
+  }
+}
