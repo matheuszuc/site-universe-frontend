@@ -1,13 +1,14 @@
 export type AccountStatus = 'active' | 'pending_verification' | 'restricted'
 
-export type ActivityType = 'account' | 'transactions'
+export type DashboardActivityType =
+  | 'ACCOUNT_CREATED'
+  | 'EMAIL_VERIFIED'
+  | 'PASSWORD_RESET_SUCCESS'
 
 export type UserActivity = {
-  id: string
-  type: ActivityType
-  title: string
-  description: string
-  occurredAt: string
+  type: DashboardActivityType
+  label: string
+  createdAt: string
 }
 
 export type UserPanelData = {
@@ -19,10 +20,27 @@ export type UserPanelData = {
     status: string
     accountStatus: AccountStatus
     emailVerified: boolean
+    emailVerifiedAt: string | null
+    createdAt: string
+    lastLoginAt: string | null
   }
-  balance: {
-    upAmount: number
-    updatedAt: string
+  account: {
+    createdAt: string
+    statusLabel: string
+    emailStatusLabel: string
+  }
+  features: {
+    shopEnabled: boolean
+    rewardsEnabled: boolean
+    gameIntegrationEnabled: boolean
+    paymentsEnabled: boolean
   }
   activities: UserActivity[]
+}
+
+export type UserDashboardResponse = {
+  user: Omit<UserPanelData['user'], 'accountStatus'>
+  account: UserPanelData['account']
+  features: UserPanelData['features']
+  activity: UserActivity[]
 }

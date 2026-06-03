@@ -1,44 +1,73 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AccountSummaryCard from '../features/user-panel/components/AccountSummaryCard'
 import ActivityHistory from '../features/user-panel/components/ActivityHistory'
 import BalanceCard from '../features/user-panel/components/BalanceCard'
 import EmailVerificationCard from '../features/user-panel/components/EmailVerificationCard'
 import QuickActions from '../features/user-panel/components/QuickActions'
-import { userPanelMock } from '../features/user-panel/mocks/userPanelMock'
-import type { AccountStatus, UserPanelData } from '../features/user-panel/types/userPanelTypes'
+import { getUserPanelData } from '../features/user-panel/services/userPanelService'
+import type { UserPanelData } from '../features/user-panel/types/userPanelTypes'
 import AuthenticatedLayout from '../layouts/AuthenticatedLayout'
 import { useAuth } from '../contexts/AuthContext'
-import type { AuthUser } from '../features/auth/types/authTypes'
-
-function getAccountStatus(user: AuthUser): AccountStatus {
-  if (!user.emailVerified || user.status === 'pending_verification') {
-    return 'pending_verification'
-  }
-
-  if (user.status !== 'active') {
-    return 'restricted'
-  }
-
-  return 'active'
-}
-
-function buildPanelData(user: AuthUser): UserPanelData {
-  return {
-    ...userPanelMock,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-      accountStatus: getAccountStatus(user),
-      emailVerified: user.emailVerified,
-    },
-  }
-}
+import { ApiError, getApiErrorMessage } from '../services/api'
 
 export default function UserDashboard() {
-  const { user } = useAuth()
-  const panelData = user ? buildPanelData(user) : null
+  const { setUser } = useAuth()
+  const navigate = useNavigate()
+  const [panelData, setPanelData] = useState<UserPanelData | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string>()
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadDashboard() {
+      setIsLoading(true)
+      setErrorMessage(undefined)
+
+      try {
+        const data = await getUserPanelData()
+
+        if (!isMounted) {
+          return
+        }
+
+        setPanelData(data)
+        setUser({
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+          status: data.user.status,
+          emailVerified: data.user.emailVerified,
+        })
+      } catch (error) {
+        if (!isMounted) {
+          return
+        }
+
+        setPanelData(null)
+
+        if (error instanceof ApiError && error.status === 401) {
+          setUser(null)
+          navigate('/login', { replace: true })
+          return
+        }
+
+        setErrorMessage(getApiErrorMessage(error))
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadDashboard()
+
+    return () => {
+      isMounted = false
+    }
+  }, [navigate, setUser])
 
   return (
     <AuthenticatedLayout>
@@ -52,17 +81,23 @@ export default function UserDashboard() {
           </p>
         </section>
 
-        {!panelData && (
+        {isLoading && (
           <div className="panel-state" role="status">
             Carregando painel...
           </div>
         )}
 
-        {panelData && (
+        {!isLoading && errorMessage && (
+          <div className="panel-state panel-state-error" role="alert">
+            {errorMessage}
+          </div>
+        )}
+
+        {!isLoading && panelData && (
           <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
             <div className="grid gap-4 md:grid-cols-2">
-              <AccountSummaryCard user={panelData.user} />
-              <BalanceCard balance={panelData.balance} />
+              <AccountSummaryCard account={panelData.account} user={panelData.user} />
+              <BalanceCard />
               <div className="md:col-span-2">
                 <EmailVerificationCard user={panelData.user} />
               </div>

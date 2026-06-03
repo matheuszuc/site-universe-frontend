@@ -16,6 +16,7 @@ type QuickAction =
 
 const quickActions: QuickAction[] = [
   { label: 'Loja', icon: 'bx-store', disabled: true },
+  { label: 'Recompensas', icon: 'bx-gift', disabled: true },
   { label: 'Suporte', icon: 'bx-support', disabled: true },
   { label: 'Termos', icon: 'bx-file', to: '/terms' },
   { label: 'Privacidade', icon: 'bx-lock-alt', to: '/privacy' },
@@ -38,7 +39,7 @@ export default function QuickActions() {
             >
               <i className={`bx ${action.icon}`} aria-hidden="true" />
               <span>{action.label}</span>
-              <small>Em breve</small>
+              <small>Integração futura</small>
             </button>
           ) : (
             <Link className="panel-action-button" key={action.label} to={action.to}>

@@ -7,6 +7,7 @@ import Fastify from "fastify";
 import { corsOptions } from "./config/cors.js";
 import { env } from "./config/env.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
+import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
 import { registerErrorHandler } from "./middlewares/error-handler.js";
 import { requestIdMiddleware } from "./middlewares/request-id.js";
 
@@ -45,6 +46,9 @@ export async function buildApp() {
 
   await app.register(authRoutes, {
     prefix: "/auth"
+  });
+  await app.register(dashboardRoutes, {
+    prefix: "/users"
   });
 
   return app;
