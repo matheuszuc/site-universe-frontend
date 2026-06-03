@@ -8,6 +8,8 @@ import Register from '../pages/Register'
 import ResetPassword from '../pages/ResetPassword'
 import TermsOfUse from '../pages/TermsOfUse'
 import UserDashboard from '../pages/UserDashboard'
+import UserRewardScale from '../pages/UserRewardScale'
+import UserStore from '../pages/UserStore'
 import VerifyEmail from '../pages/VerifyEmail'
 import ProtectedRoute from './ProtectedRoute'
 
@@ -31,10 +33,42 @@ export default function AppRoutes() {
         }
       />
       <Route
+        path="/painel/loja"
+        element={
+          <ProtectedRoute>
+            <UserStore />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/painel/recompensas"
+        element={
+          <ProtectedRoute>
+            <UserRewardScale />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
             <UserDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/store"
+        element={
+          <ProtectedRoute>
+            <UserStore />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/rewards"
+        element={
+          <ProtectedRoute>
+            <UserRewardScale />
           </ProtectedRoute>
         }
       />

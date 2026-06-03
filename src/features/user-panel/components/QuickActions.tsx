@@ -15,8 +15,8 @@ type QuickAction =
     }
 
 const quickActions: QuickAction[] = [
-  { label: 'Loja', icon: 'bx-store', disabled: true },
-  { label: 'Recompensas', icon: 'bx-gift', disabled: true },
+  { label: 'Loja', icon: 'bx-store', to: '/painel/loja' },
+  { label: 'Recompensas', icon: 'bx-gift', to: '/painel/recompensas' },
   { label: 'Suporte', icon: 'bx-support', disabled: true },
   { label: 'Termos', icon: 'bx-file', to: '/terms' },
   { label: 'Privacidade', icon: 'bx-lock-alt', to: '/privacy' },

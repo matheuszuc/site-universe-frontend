@@ -10,7 +10,8 @@ type AuthenticatedLayoutProps = {
 
 const navItems = [
   { label: 'Painel', to: '/painel', icon: 'bx-grid-alt' },
-  { label: 'Loja', to: '#', icon: 'bx-store', disabled: true },
+  { label: 'Loja', to: '/painel/loja', icon: 'bx-store' },
+  { label: 'Recompensas', to: '/painel/recompensas', icon: 'bx-gift' },
   { label: 'Suporte', to: '#', icon: 'bx-support', disabled: true },
 ]
 
