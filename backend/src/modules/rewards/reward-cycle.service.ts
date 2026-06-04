@@ -138,7 +138,7 @@ export class UserRewardCycleService {
 
   async addProgressFromPaymentTx(tx: RewardTx, input: AddProgressInput) {
     if (input.amountUp <= 0) {
-      throw new AppError(409, "CONFLICT", "Quantidade de UP invalida para progresso.");
+      throw new AppError(409, "CONFLICT", "Quantidade de AP invalida para progresso.");
     }
 
     const existingEvent = await tx.userRewardCycleProgressEvent.findUnique({
@@ -334,7 +334,7 @@ export class UserRewardCycleService {
               requiredUpTotal: tier.requiredUpTotal
             }
           });
-          throw new AppError(409, "CONFLICT", "UP acumulado insuficiente para este rank.");
+          throw new AppError(409, "CONFLICT", "AP acumulado insuficiente para este rank.");
         }
 
         const previousTiers = await tx.rewardTier.findMany({

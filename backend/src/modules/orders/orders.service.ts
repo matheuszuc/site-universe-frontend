@@ -233,7 +233,7 @@ export class OrdersService {
             packageName: storePackage.name,
             amountCents: storePackage.priceCents,
             currency: storePackage.currency,
-            rewardType: "UP",
+            rewardType: "AP",
             rewardAmount: storePackage.upAmount,
             expiresAt: addMinutes(now, 30),
             metadata: {
