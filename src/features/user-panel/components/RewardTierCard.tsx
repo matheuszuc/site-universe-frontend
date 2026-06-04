@@ -52,12 +52,11 @@ export default function RewardTierCard({ tier, onOpen }: RewardTierCardProps) {
       <div className="reward-item-slot mt-5">
         <i className="bx bx-gift text-3xl" aria-hidden="true" />
         <span>{getRewardSummary(tier)}</span>
-        <small>Ver recompensas</small>
       </div>
 
       <Button className="mt-5 w-full" onClick={() => onOpen(tier)} variant="secondary">
         <i className="bx bx-detail text-xl" aria-hidden="true" />
-        Ver detalhes
+        Ver recompensas
       </Button>
 
       <Button className="mt-3 w-full" disabled variant={tier.status === 'eligible' ? 'primary' : 'secondary'}>
