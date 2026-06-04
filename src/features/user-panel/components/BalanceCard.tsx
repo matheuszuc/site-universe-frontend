@@ -3,7 +3,7 @@ import Card from '../../../components/ui/Card'
 export default function BalanceCard() {
   return (
     <Card className="p-5">
-      <p className="panel-card-kicker">Saldo UP</p>
+      <p className="panel-card-kicker">Saldo AP</p>
       <div className="mt-3">
         <strong className="text-3xl font-black text-white">Em breve</strong>
       </div>

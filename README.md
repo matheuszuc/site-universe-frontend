@@ -17,19 +17,25 @@ Este módulo cobre:
 
 Não inclui gateway real de pagamento, Mercado Pago, Stripe, entrega no jogo, carrinho, painel admin, OAuth, 2FA/MFA ou provedor real de e-mail.
 
-## Loja de UP e Escala
+## Loja de AP e Escala
 
-- A Loja usa `store_packages` como fonte da verdade de preco, moeda e quantidade de UP.
-- O frontend envia somente o codigo do pacote ao criar pedido; preco e UP nao sao confiados ao frontend.
+- A Loja usa `store_packages` como fonte da verdade de preco, moeda e quantidade de AP.
+- O frontend envia somente o codigo do pacote ao criar pedido; preco e AP nao sao confiados ao frontend.
+- A tela da loja carrega pacotes por `GET /api/store/packages`.
 - `POST /orders` cria pedido `pending_payment` e pagamento `pending`; nao aprova pagamento.
+- A criacao de pedido envia apenas `packageCode` e `Idempotency-Key`.
+- Ainda nao ha endpoint publico de historico/listagem de pedidos; a tela nao exibe secao de pedidos anteriores.
 - A aprovacao de pagamento fica somente na funcao interna `approvePaymentFromVerifiedWebhook`, preparada para webhook validado futuro.
-- Compras aprovadas no Site Universe somam UP ao ciclo ativo da escala por `user_reward_cycle_progress_events`.
-- O UP acumulado da escala e separado do UP dentro do jogo.
+- Compras aprovadas no Site Universe somam AP ao ciclo ativo da escala por `user_reward_cycle_progress_events`.
+- O AP acumulado da escala e separado do AP dentro do jogo.
+- A tela da escala carrega progresso, status dos ranks e itens das caixas por `GET /api/rewards/scale`.
 - Cada rank pode ser resgatado uma vez por ciclo em `user_reward_tier_claims`.
+- O resgate de caixa usa `POST /api/rewards/tiers/:tierCode/claim` com `Idempotency-Key` e nao entrega item no GF.
 - Ranks precisam ser resgatados em sequencia.
 - O resgate do Rank 6 encerra o ciclo atual e cria um novo ciclo ativo com `accumulated_up = 0`.
 - `game_item_id` e interno em `reward_tier_items` e nao aparece nas respostas publicas.
 - A entrega real no GF fica para etapa futura via um servico de integracao de jogo; esta etapa nao chama `age_insertitem` nem acessa bases GF.
+- Os nomes internos `up_amount`, `required_up_total` e `accumulated_up` continuam por compatibilidade de schema, mas a exibicao publica usa AP.
 - Nao ha gateway real, Mercado Pago, Stripe, entrega no GF, painel admin ou integracao com gf_ms/gf_ls/FFAccount/tb_user/pvalues nesta etapa.
 
 ## Atualização de Conta Antiga
@@ -206,6 +212,7 @@ Backend Loja e Recompensas:
 - `GET /api/rewards/scale`
 - `POST /api/rewards/tiers/:tierCode/claim`
 - `POST /orders`
+- Historico de pedidos: pendente, sem `GET /orders` publico.
 
 Backend Atualização de Conta Antiga:
 

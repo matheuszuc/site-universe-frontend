@@ -1,13 +1,19 @@
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
-import { formatUpAmount, type StorePackage } from '../../../data/storePackages'
+import { formatApAmount } from '../../../data/storePackages'
+import type { StorePackage } from '../../store/services/storeApi'
 
 type StorePackageCardProps = {
+  isCreating?: boolean
   storePackage: StorePackage
   onSelect: (storePackage: StorePackage) => void
 }
 
-export default function StorePackageCard({ storePackage, onSelect }: StorePackageCardProps) {
+export default function StorePackageCard({
+  isCreating = false,
+  storePackage,
+  onSelect,
+}: StorePackageCardProps) {
   return (
     <Card className="relative overflow-hidden p-5">
       {storePackage.badge && (
@@ -20,19 +26,24 @@ export default function StorePackageCard({ storePackage, onSelect }: StorePackag
         <span />
       </div>
 
-      <p className="panel-card-kicker">Pacote de UP</p>
+      <p className="panel-card-kicker">Pacote de AP</p>
       <h2 className="mt-3 text-3xl font-black text-white">
-        {formatUpAmount(storePackage.upAmount)} UP
+        {formatApAmount(storePackage.apAmount)} AP
       </h2>
-      <p className="mt-2 text-lg font-black text-cyan-100">{storePackage.priceLabel}</p>
+      <p className="mt-2 text-lg font-black text-cyan-100">{storePackage.formattedPrice}</p>
 
       <p className="mt-4 min-h-12 text-sm leading-relaxed text-white/65">
-        Pacote visual para a loja do painel. A compra real será ativada em uma etapa futura.
+        Pacote disponível no catálogo do Site Universe. O pedido será criado com status pendente.
       </p>
 
-      <Button className="mt-5 w-full" onClick={() => onSelect(storePackage)} variant="secondary">
+      <Button
+        className="mt-5 w-full"
+        disabled={isCreating}
+        onClick={() => onSelect(storePackage)}
+        variant="secondary"
+      >
         <i className="bx bx-cart-add text-xl" aria-hidden="true" />
-        Comprar
+        {isCreating ? 'Criando pedido...' : 'Comprar AP'}
       </Button>
     </Card>
   )

@@ -832,6 +832,58 @@ button {
   left: 16px;
 }
 
+.store-order-modal {
+  width: min(100%, 560px);
+}
+
+.store-order-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.store-order-summary div {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 12px;
+}
+
+.store-order-summary span {
+  display: block;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.store-order-summary strong {
+  display: block;
+  margin-top: 4px;
+  color: white;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.store-order-warning {
+  margin-top: 14px;
+  border: 1px solid rgba(252, 211, 77, 0.34);
+  border-radius: 8px;
+  background: rgba(252, 211, 77, 0.1);
+  padding: 12px;
+  color: #fef3c7;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.store-order-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
 .reward-status-badge {
   display: inline-flex;
   min-height: 30px;
@@ -1222,7 +1274,8 @@ button {
 
   .reward-detail-meta,
   .reward-option-grid,
-  .reward-detail-items {
+  .reward-detail-items,
+  .store-order-summary {
     grid-template-columns: 1fr;
   }
 

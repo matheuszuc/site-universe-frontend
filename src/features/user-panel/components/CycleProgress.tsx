@@ -1,5 +1,5 @@
 import Card from '../../../components/ui/Card'
-import { formatUpAmount } from '../../../data/storePackages'
+import { formatApAmount } from '../../../data/storePackages'
 
 type CycleProgressProps = {
   currentUp: number
@@ -21,10 +21,10 @@ export default function CycleProgress({
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center">
         <div>
           <p className="panel-card-kicker">Ciclo atual</p>
-          <h2 className="panel-card-title">{formatUpAmount(currentUp)} UP acumulado</h2>
+          <h2 className="panel-card-title">{formatApAmount(currentUp)} AP acumulado</h2>
           <p className="mt-3 text-sm leading-relaxed text-white/68">
-            Acumule UP comprando pacotes na loja. Ao atingir a meta de cada rank, uma recompensa
-            será liberada para resgate. Ao concluir o Rank 6, a escala reinicia em um novo ciclo.
+            Acumule AP comprando pacotes na loja. Ao atingir a meta de cada rank, uma caixa de
+            recompensas será liberada. Ao concluir o Rank 6, a escala reinicia em um novo ciclo.
           </p>
         </div>
 
@@ -32,7 +32,7 @@ export default function CycleProgress({
           <p className="text-xs font-black uppercase text-white/60">Próximo rank</p>
           <strong className="mt-1 block text-xl text-white">{nextRankName}</strong>
           <span className="mt-2 block text-sm font-bold text-cyan-100">
-            Faltam {formatUpAmount(missingUp)} UP
+            Faltam {formatApAmount(missingUp)} AP
           </span>
         </div>
       </div>
@@ -48,7 +48,7 @@ export default function CycleProgress({
       </div>
 
       <p className="mt-4 text-xs font-bold uppercase tracking-normal text-white/50">
-        O progresso considera somente UP acumulado no site durante este ciclo.
+        O progresso considera somente AP acumulado no site durante este ciclo.
       </p>
     </Card>
   )

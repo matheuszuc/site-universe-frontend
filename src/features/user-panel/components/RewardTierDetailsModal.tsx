@@ -1,12 +1,7 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useEffect, type MouseEvent } from 'react'
 import Button from '../../../components/ui/Button'
-import { formatUpAmount } from '../../../data/storePackages'
-import type {
-  RewardItem,
-  RewardOption,
-  RewardTier,
-  RewardTierStatus,
-} from '../../../data/rewardTiers'
+import { formatApAmount } from '../../../data/storePackages'
+import type { RewardItem, RewardTier, RewardTierStatus } from '../../../data/rewardTiers'
 
 const statusLabels: Record<RewardTierStatus, string> = {
   locked: 'Bloqueado',
@@ -26,6 +21,8 @@ const statusClasses: Record<RewardTierStatus, string> = {
 
 type RewardTierDetailsModalProps = {
   currentUp: number
+  isClaiming?: boolean
+  onClaim: (tier: RewardTier) => void
   onClose: () => void
   tier: RewardTier
 }
@@ -45,47 +42,35 @@ function RewardItemCard({ item }: { item: RewardItem }) {
   )
 }
 
-function RewardOptionCard({
-  isSelected,
-  onSelect,
-  option,
-}: {
-  isSelected: boolean
-  onSelect: (option: RewardOption) => void
-  option: RewardOption
-}) {
-  return (
-    <button
-      aria-pressed={isSelected}
-      className={`reward-option-card ${isSelected ? 'selected' : ''}`}
-      onClick={() => onSelect(option)}
-      type="button"
-    >
-      <span className="reward-option-check" aria-hidden="true">
-        <i className={isSelected ? 'bx bx-check' : 'bx bx-radio-circle'} />
-      </span>
-      <span>
-        <strong>{option.name}</strong>
-        {option.description && <small>{option.description}</small>}
-      </span>
-    </button>
-  )
+function getActionLabel(status: RewardTierStatus, isClaiming: boolean) {
+  if (isClaiming) {
+    return 'Registrando resgate...'
+  }
+
+  if (status === 'locked') {
+    return 'Bloqueado'
+  }
+
+  if (status === 'claimed' || status === 'delivered') {
+    return 'Resgatado'
+  }
+
+  if (status === 'delivery_pending') {
+    return 'Entrega pendente'
+  }
+
+  return 'Resgatar caixa'
 }
 
 export default function RewardTierDetailsModal({
   currentUp,
+  isClaiming = false,
+  onClaim,
   onClose,
   tier,
 }: RewardTierDetailsModalProps) {
-  const [selectedOptionCode, setSelectedOptionCode] = useState<string>()
-  const selectedOption = useMemo(
-    () => tier.options?.find((option) => option.code === selectedOptionCode),
-    [selectedOptionCode, tier.options],
-  )
-  const hasOptions = Boolean(tier.options?.length)
-  const visibleItems = selectedOption?.items ?? tier.items ?? []
   const missingUp = Math.max(0, tier.requiredUpTotal - currentUp)
-  const canConfirmMock = tier.status === 'eligible' && (!hasOptions || Boolean(selectedOption))
+  const canClaim = tier.status === 'eligible'
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -103,22 +88,6 @@ export default function RewardTierDetailsModal({
     if (event.target === event.currentTarget) {
       onClose()
     }
-  }
-
-  function getActionLabel() {
-    if (tier.status === 'locked') {
-      return 'Bloqueado'
-    }
-
-    if (tier.status === 'claimed' || tier.status === 'delivered') {
-      return 'Resgatado'
-    }
-
-    if (tier.status === 'delivery_pending') {
-      return 'Entrega pendente'
-    }
-
-    return hasOptions ? 'Confirmar resgate em breve' : 'Resgate em breve'
   }
 
   return (
@@ -140,8 +109,8 @@ export default function RewardTierDetailsModal({
 
         <div className="reward-detail-header">
           <div>
-            <p className="panel-card-kicker">Detalhes do rank</p>
-            <h2 id="reward-tier-modal-title">{tier.name}</h2>
+            <p className="panel-card-kicker">{tier.name}</p>
+            <h2 id="reward-tier-modal-title">{tier.boxName}</h2>
             <p>{tier.description}</p>
           </div>
           <span className={`reward-status-badge ${statusClasses[tier.status]}`}>
@@ -152,56 +121,38 @@ export default function RewardTierDetailsModal({
         <div className="reward-detail-meta">
           <div>
             <span>Meta necessária</span>
-            <strong>{formatUpAmount(tier.requiredUpTotal)} UP</strong>
+            <strong>{formatApAmount(tier.requiredUpTotal)} AP</strong>
           </div>
           <div>
-            <span>UP acumulado</span>
-            <strong>{formatUpAmount(currentUp)} UP</strong>
+            <span>AP acumulado</span>
+            <strong>{formatApAmount(currentUp)} AP</strong>
           </div>
         </div>
 
         {tier.status === 'locked' && (
           <div className="reward-detail-note">
-            Faltam {formatUpAmount(missingUp)} UP para liberar este rank.
+            Faltam {formatApAmount(missingUp)} AP para liberar este rank.
           </div>
         )}
 
-        {hasOptions ? (
-          <section className="reward-detail-section">
-            <h3>Escolha uma opção de recompensa</h3>
-            <div className="reward-option-grid">
-              {tier.options?.map((option) => (
-                <RewardOptionCard
-                  isSelected={option.code === selectedOptionCode}
-                  key={option.code}
-                  onSelect={(nextOption) => setSelectedOptionCode(nextOption.code)}
-                  option={option}
-                />
-              ))}
-            </div>
-          </section>
-        ) : (
-          <section className="reward-detail-section">
-            <h3>Recompensas deste rank</h3>
-          </section>
-        )}
+        <section className="reward-detail-section">
+          <h3>Itens dentro da caixa</h3>
+        </section>
 
-        {hasOptions && !selectedOption ? (
-          <div className="reward-detail-empty">
-            Selecione uma opção para visualizar o conjunto de recompensas.
-          </div>
-        ) : (
-          <div className="reward-detail-items" aria-label="Lista de recompensas">
-            {visibleItems.map((item) => (
-              <RewardItemCard item={item} key={`${item.name}-${item.quantity}`} />
-            ))}
-          </div>
-        )}
+        <div className="reward-detail-items" aria-label="Itens dentro da caixa">
+          {tier.items.map((item) => (
+            <RewardItemCard item={item} key={`${item.name}-${item.quantity}`} />
+          ))}
+        </div>
 
         <div className="reward-detail-actions">
-          <Button disabled={!canConfirmMock} variant={canConfirmMock ? 'primary' : 'secondary'}>
+          <Button
+            disabled={!canClaim || isClaiming}
+            onClick={() => onClaim(tier)}
+            variant={canClaim ? 'primary' : 'secondary'}
+          >
             <i className="bx bx-gift text-xl" aria-hidden="true" />
-            {getActionLabel()}
+            {getActionLabel(tier.status, isClaiming)}
           </Button>
           <Button onClick={onClose} variant="ghost">
             Fechar
