@@ -8,6 +8,9 @@ import { corsOptions } from "./config/cors.js";
 import { env } from "./config/env.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
+import { ordersRoutes } from "./modules/orders/orders.routes.js";
+import { rewardsRoutes } from "./modules/rewards/rewards.routes.js";
+import { storeRoutes } from "./modules/store/store.routes.js";
 import { registerErrorHandler } from "./middlewares/error-handler.js";
 import { requestIdMiddleware } from "./middlewares/request-id.js";
 
@@ -49,6 +52,15 @@ export async function buildApp() {
   });
   await app.register(dashboardRoutes, {
     prefix: "/users"
+  });
+  await app.register(storeRoutes, {
+    prefix: "/api/store"
+  });
+  await app.register(rewardsRoutes, {
+    prefix: "/api/rewards"
+  });
+  await app.register(ordersRoutes, {
+    prefix: "/orders"
   });
 
   return app;

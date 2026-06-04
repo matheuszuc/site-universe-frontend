@@ -131,8 +131,8 @@ export class DashboardService {
         emailStatusLabel: user.emailVerifiedAt ? "Verificado" : "Não verificado"
       },
       features: {
-        shopEnabled: false,
-        rewardsEnabled: false,
+        shopEnabled: true,
+        rewardsEnabled: true,
         gameIntegrationEnabled: false,
         paymentsEnabled: false
       },

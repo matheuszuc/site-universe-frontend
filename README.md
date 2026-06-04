@@ -16,6 +16,21 @@ Este módulo cobre:
 
 Não inclui pagamento, recompensas, integração com jogo, loja, carrinho, painel admin, OAuth, 2FA/MFA ou provedor real de e-mail.
 
+## Loja de UP e Escala
+
+- A Loja usa `store_packages` como fonte da verdade de preco, moeda e quantidade de UP.
+- O frontend envia somente o codigo do pacote ao criar pedido; preco e UP nao sao confiados ao frontend.
+- `POST /orders` cria pedido `pending_payment` e pagamento `pending`; nao aprova pagamento.
+- A aprovacao de pagamento fica somente na funcao interna `approvePaymentFromVerifiedWebhook`, preparada para webhook validado futuro.
+- Compras aprovadas no Site Universe somam UP ao ciclo ativo da escala por `user_reward_cycle_progress_events`.
+- O UP acumulado da escala e separado do UP dentro do jogo.
+- Cada rank pode ser resgatado uma vez por ciclo em `user_reward_tier_claims`.
+- Ranks precisam ser resgatados em sequencia.
+- O resgate do Rank 6 encerra o ciclo atual e cria um novo ciclo ativo com `accumulated_up = 0`.
+- `game_item_id` e interno em `reward_tier_items` e nao aparece nas respostas publicas.
+- A entrega real no GF fica para etapa futura via um servico de integracao de jogo; esta etapa nao chama `age_insertitem` nem acessa bases GF.
+- Nao ha gateway real, Mercado Pago, Stripe, entrega no GF, painel admin ou integracao com gf_ms/gf_ls/FFAccount/tb_user/pvalues nesta etapa.
+
 ## Stack
 
 Frontend:
@@ -119,7 +134,11 @@ Frontend:
 - `/forgot-password`
 - `/reset-password?token=...`
 - `/painel`
+- `/painel/loja`
+- `/painel/recompensas`
 - `/dashboard`
+- `/dashboard/store`
+- `/dashboard/rewards`
 - `/terms`
 - `/privacy`
 
@@ -135,6 +154,13 @@ Backend Auth:
 - `POST /auth/forgot-password`
 - `POST /auth/reset-password`
 
+Backend Loja e Recompensas:
+
+- `GET /api/store/packages`
+- `GET /api/rewards/scale`
+- `POST /api/rewards/tiers/:tierCode/claim`
+- `POST /orders`
+
 ## Validação antes de avançar
 
 Frontend:
@@ -149,4 +175,6 @@ Backend:
 cd backend
 npm run build
 npx prisma validate
+npx prisma migrate status
+npm run prisma:generate
 ```
