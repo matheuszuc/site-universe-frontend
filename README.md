@@ -36,12 +36,20 @@ Não inclui gateway real de pagamento, Mercado Pago, Stripe, entrega no jogo, ca
 
 - A rota pública `/atualizar-conta` inicia o fluxo de atualização de contas antigas.
 - A primeira etapa envia somente login do jogo e senha atual para `POST /api/account-migration/start`.
-- Se a conta for validada futuramente por um serviço GF interno, o backend cria uma sessão temporária em cookie httpOnly.
+- O login antigo aceita apenas letras e números (`^[A-Za-z0-9]+$`).
+- O backend valida a senha antiga consultando `gf_ms.tb_user` pelo campo `mid` e `gf_ls.accounts` pelo campo `username`.
+- O MD5 da senha digitada é aceito se bater com `gf_ls.accounts.password`, `gf_ms.tb_user.password` ou `gf_ms.tb_user.pwd`.
+- Se a conta for validada, o backend cria uma sessão temporária em cookie httpOnly, com expiração configurada em `ACCOUNT_MIGRATION_SESSION_TTL_MINUTES`.
 - A segunda etapa usa `POST /api/account-migration/complete` para cadastrar e-mail e nova senha no Site Universe.
+- A nova senha precisa ter no mínimo 8 caracteres, letra maiúscula, letra minúscula, número e caractere especial.
+- Ao concluir, a senha do Site Universe é salva com o hash moderno do backend; MD5 é usado somente para compatibilidade com o Grand Fantasia.
+- O backend atualiza `gf_ms.tb_user.password`, `gf_ms.tb_user.pwd` e `gf_ls.accounts.password` com o mesmo MD5 da nova senha.
+- O backend não altera `gf_ls.accounts.charpassword`, `use_charpassword`, `pvalues`, `bonus`, AP/P ou itens.
+- Cada conta GF só pode concluir a migração uma vez; depois disso `/atualizar-conta` não pode trocar e-mail ou senha dessa conta.
+- Após migrada, mudanças futuras devem ocorrer pelo login normal, recuperação de senha, painel logado ou suporte/admin.
 - `GET /api/account-migration/status` informa apenas se existe uma sessão temporária válida.
 - O frontend não salva senha em URL, `localStorage` ou `sessionStorage`.
 - O backend não expõe `idnum`, hash de senha, `pwd`, `pvalues`, `bonus` ou campos internos GF.
-- O adaptador GF está intencionalmente bloqueado até o formato real de senha/acesso ser confirmado; por isso credenciais antigas não são aceitas nesta etapa.
 
 ## Stack
 
@@ -124,9 +132,30 @@ ACCOUNT_MIGRATION_COOKIE_NAME=site_universe_migration
 ACCOUNT_MIGRATION_SESSION_TTL_MINUTES=15
 ACCOUNT_MIGRATION_RATE_LIMIT_MAX=5
 ACCOUNT_MIGRATION_RATE_LIMIT_WINDOW=15 minutes
+GF_DB_HOST=
+GF_DB_PORT=5432
+GF_DB_USER=
+GF_DB_PASSWORD=
+GF_DB_NAME=gf_ms
+GF_ACCOUNT_DB_NAME=gf_ls
+GF_DB_SSL=false
 ```
 
 Não coloque valores reais de segredo no repositório.
+
+## Teste local da migração GF
+
+1. Configure `DATABASE_URL` para o banco do Site Universe.
+2. Configure `GF_DB_HOST`, `GF_DB_PORT`, `GF_DB_USER`, `GF_DB_PASSWORD`, `GF_DB_NAME=gf_ms`, `GF_ACCOUNT_DB_NAME=gf_ls` e `GF_DB_SSL`.
+3. Rode as migrations e gere o Prisma Client no backend.
+4. Inicie backend e frontend.
+5. Acesse `/atualizar-conta`.
+6. Informe um login existente em `gf_ms.tb_user.mid` e `gf_ls.accounts.username`.
+7. Informe e-mail, nova senha forte e confirmação.
+8. Confira que `game_accounts` recebeu `game_login`, `game_account_id`, `linked_at` e `migrated_at`.
+9. Confira que `gf_ms.tb_user.password`, `gf_ms.tb_user.pwd` e `gf_ls.accounts.password` foram atualizados para o mesmo MD5 da nova senha.
+10. Confira que `gf_ls.accounts.charpassword` e `use_charpassword` não foram alterados.
+11. Tente iniciar novamente com o mesmo login GF e confirme a mensagem de conta já atualizada.
 
 ## Fluxo de autenticação
 

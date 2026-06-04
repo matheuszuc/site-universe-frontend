@@ -16,6 +16,8 @@ import { ApiError, getApiErrorMessage } from '../services/api'
 
 type Step = 'credentials' | 'complete' | 'done'
 
+const gameLoginPattern = /^[A-Za-z0-9]+$/
+
 const passwordRules = [
   {
     label: 'Mínimo 8 caracteres',
@@ -94,16 +96,29 @@ export default function UpdateLegacyAccount() {
     event.preventDefault()
     setErrorMessage(undefined)
     setSuccessMessage(undefined)
+
+    const normalizedGameLogin = gameLogin.trim()
+
+    if (!gameLoginPattern.test(normalizedGameLogin)) {
+      setErrorMessage('Use apenas letras e números no usuário do jogo.')
+      return
+    }
+
     setIsLoading(true)
 
     try {
-      const result = await startAccountMigration({ gameLogin, currentPassword })
+      const result = await startAccountMigration({
+        gameLogin: normalizedGameLogin,
+        currentPassword,
+      })
       setGameLogin(result.gameLogin)
       setCurrentPassword('')
       setStep('complete')
     } catch (error) {
       if (error instanceof ApiError && error.code === 'INVALID_CREDENTIALS') {
         setErrorMessage('Usuário ou senha inválidos.')
+      } else if (error instanceof ApiError && error.code === 'ACCOUNT_ALREADY_MIGRATED') {
+        setErrorMessage('Esta conta já foi atualizada. Acesse o site normalmente ou use a recuperação de senha.')
       } else {
         setErrorMessage(getApiErrorMessage(error))
       }
@@ -168,8 +183,10 @@ export default function UpdateLegacyAccount() {
                       <Input
                         autoComplete="username"
                         id="gameLogin"
+                        inputMode="text"
                         maxLength={60}
                         onChange={(event) => setGameLogin(event.target.value)}
+                        pattern="[A-Za-z0-9]+"
                         placeholder="usuario123"
                         value={gameLogin}
                       />
