@@ -1,4 +1,5 @@
 export type SafeErrorCode =
+  | "ACCOUNT_ALREADY_MIGRATED"
   | "BAD_REQUEST"
   | "UNAUTHORIZED"
   | "INVALID_CREDENTIALS"
@@ -10,6 +11,7 @@ export type SafeErrorCode =
   | "RATE_LIMITED"
   | "UNSUPPORTED_MEDIA_TYPE"
   | "INVALID_OR_EXPIRED_TOKEN"
+  | "SERVICE_UNAVAILABLE"
   | "INTERNAL_SERVER_ERROR";
 
 export class AppError extends Error {

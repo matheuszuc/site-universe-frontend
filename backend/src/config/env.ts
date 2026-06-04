@@ -3,6 +3,11 @@ import { z } from "zod";
 
 config();
 
+const booleanStringSchema = z
+  .enum(["true", "false"])
+  .optional()
+  .transform((value) => value === "true");
+
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -30,7 +35,14 @@ const envSchema = z.object({
   EMAIL_VERIFICATION_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
   EMAIL_VERIFICATION_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes"),
   ACCOUNT_MIGRATION_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
-  ACCOUNT_MIGRATION_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes")
+  ACCOUNT_MIGRATION_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes"),
+  GF_DB_HOST: z.string().optional(),
+  GF_DB_PORT: z.coerce.number().int().positive().default(5432),
+  GF_DB_USER: z.string().optional(),
+  GF_DB_PASSWORD: z.string().optional(),
+  GF_DB_NAME: z.string().min(1).default("gf_ms"),
+  GF_ACCOUNT_DB_NAME: z.string().min(1).default("gf_ls"),
+  GF_DB_SSL: booleanStringSchema
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -41,4 +53,5 @@ if (!parsedEnv.success) {
 }
 
 export const env = parsedEnv.data;
+export const isDevelopment = env.NODE_ENV === "development";
 export const isProduction = env.NODE_ENV === "production";

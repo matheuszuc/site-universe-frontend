@@ -13,17 +13,25 @@ import {
   type CompleteAccountMigrationInput,
   type StartAccountMigrationInput
 } from "./account-migration.schemas.js";
-import { gfLegacyAuthService } from "./gf-legacy-auth.service.js";
+import { gfLegacyAuthService, type VerifiedLegacyGameAccount } from "./gf-legacy-auth.service.js";
 
 type RequestInfo = {
   ip?: string;
   userAgent?: string;
 };
 
+type GameAccountIdentity = Pick<VerifiedLegacyGameAccount, "gameLogin" | "gameAccountId">;
+
 const invalidLegacyCredentialsError = new AppError(
   401,
   "INVALID_CREDENTIALS",
   "Usuario ou senha invalidos."
+);
+
+const accountAlreadyMigratedError = new AppError(
+  409,
+  "ACCOUNT_ALREADY_MIGRATED",
+  "Esta conta ja foi atualizada. Use o login normal do site ou a recuperacao de senha."
 );
 
 function addMinutes(date: Date, minutes: number) {
@@ -41,7 +49,7 @@ function buildFrontendLink(path: string, token: string) {
 }
 
 function normalizeGameLogin(gameLogin: string) {
-  return gameLogin.trim().toLowerCase();
+  return gameLogin.trim();
 }
 
 function safeDisplayGameLogin(gameLogin: string) {
@@ -55,27 +63,33 @@ function getRequestHashes(requestInfo: RequestInfo) {
   };
 }
 
+function buildGameAccountLookup(account: GameAccountIdentity) {
+  return [
+    {
+      gameLogin: account.gameLogin
+    },
+    {
+      gameAccountId: account.gameAccountId
+    }
+  ];
+}
+
 export class AccountMigrationService {
   async start(input: unknown, requestInfo: RequestInfo = {}) {
     const parsedInput = startAccountMigrationSchema.parse(
       input
     ) satisfies StartAccountMigrationInput;
     const gameLogin = normalizeGameLogin(parsedInput.gameLogin);
-    const existingGameAccount = await prisma.gameAccount.findUnique({
-      where: {
-        gameLogin
-      }
-    });
 
-    if (existingGameAccount) {
+    if (await this.findMigratedGameAccountByLogin(gameLogin)) {
       await this.recordAudit({
-        eventType: "ACCOUNT_MIGRATION_START_REJECTED_ALREADY_LINKED",
+        eventType: "ACCOUNT_MIGRATION_START_REJECTED_ALREADY_MIGRATED",
         success: false,
-        reason: "already_linked",
+        reason: "already_migrated",
         gameLogin,
         requestInfo
       });
-      throw invalidLegacyCredentialsError;
+      throw accountAlreadyMigratedError;
     }
 
     const verifiedAccount = await gfLegacyAuthService.verifyCredentials({
@@ -87,11 +101,22 @@ export class AccountMigrationService {
       await this.recordAudit({
         eventType: "ACCOUNT_MIGRATION_START_FAILED",
         success: false,
-        reason: "invalid_credentials_or_adapter_not_configured",
+        reason: "invalid_credentials",
         gameLogin,
         requestInfo
       });
       throw invalidLegacyCredentialsError;
+    }
+
+    if (await this.findMigratedGameAccount(verifiedAccount)) {
+      await this.recordAudit({
+        eventType: "ACCOUNT_MIGRATION_START_REJECTED_ALREADY_MIGRATED",
+        success: false,
+        reason: "already_migrated",
+        gameLogin: verifiedAccount.gameLogin,
+        requestInfo
+      });
+      throw accountAlreadyMigratedError;
     }
 
     const now = new Date();
@@ -101,7 +126,7 @@ export class AccountMigrationService {
       data: {
         sessionTokenHash: tokenService.hashToken(migrationToken),
         gameLogin: normalizeGameLogin(verifiedAccount.gameLogin),
-        gameAccountId: verifiedAccount.gameAccountId ?? null,
+        gameAccountId: verifiedAccount.gameAccountId,
         status: "verified",
         expiresAt: addMinutes(now, env.ACCOUNT_MIGRATION_SESSION_TTL_MINUTES),
         attempts: 1,
@@ -117,7 +142,9 @@ export class AccountMigrationService {
       gameLogin,
       requestInfo,
       metadata: {
-        sessionId: session.id
+        sessionId: session.id,
+        matchedPasswordSources: verifiedAccount.matchedPasswordSources,
+        passwordHashState: verifiedAccount.passwordHashState
       }
     });
 
@@ -161,55 +188,94 @@ export class AccountMigrationService {
       await this.recordAudit({
         eventType: "ACCOUNT_MIGRATION_COMPLETE_REJECTED",
         success: false,
-        reason: "missing_or_expired_session",
+        reason: "missing_expired_or_completed_session",
         requestInfo
       });
       throw new AppError(401, "UNAUTHORIZED", "Sessao de migracao expirada.");
     }
 
-    const emailNormalized = normalizeEmail(parsedInput.email);
-    const existingUser = await prisma.user.findUnique({
-      where: {
-        emailNormalized
-      }
-    });
-
-    if (existingUser) {
-      await this.recordAudit({
-        eventType: "ACCOUNT_MIGRATION_COMPLETE_REJECTED",
-        success: false,
-        reason: "email_already_exists",
-        gameLogin: session.gameLogin,
-        requestInfo
-      });
-      throw new AppError(409, "CONFLICT", "Nao foi possivel atualizar a conta com estes dados.");
-    }
-
-    const existingGameAccount = await prisma.gameAccount.findUnique({
-      where: {
-        gameLogin: session.gameLogin
-      }
-    });
-
-    if (existingGameAccount) {
-      await this.recordAudit({
-        eventType: "ACCOUNT_MIGRATION_COMPLETE_REJECTED",
-        success: false,
-        reason: "game_account_already_linked",
-        gameLogin: session.gameLogin,
-        requestInfo
-      });
-      throw new AppError(409, "CONFLICT", "Nao foi possivel atualizar a conta com estes dados.");
-    }
-
     const now = new Date();
+    const emailNormalized = normalizeEmail(parsedInput.email);
     const passwordHash = await passwordService.hashPassword(parsedInput.newPassword);
-    const gamePasswordUpdateStatus = await gfLegacyAuthService.updatePasswordIfSupported({
-      gameLogin: session.gameLogin,
-      newPassword: parsedInput.newPassword
-    });
 
     const result = await prisma.$transaction(async (tx) => {
+      const sessionClaim = await tx.legacyAccountMigrationSession.updateMany({
+        where: {
+          id: session.id,
+          status: "verified",
+          expiresAt: {
+            gt: now
+          }
+        },
+        data: {
+          status: "completed",
+          completedAt: now
+        }
+      });
+
+      if (sessionClaim.count !== 1) {
+        await this.recordAuditTx(tx, {
+          eventType: "ACCOUNT_MIGRATION_COMPLETE_REJECTED",
+          success: false,
+          reason: "session_already_used",
+          gameLogin: session.gameLogin,
+          requestInfo
+        });
+        throw new AppError(409, "CONFLICT", "Nao foi possivel atualizar a conta com estes dados.");
+      }
+
+      const existingUser = await tx.user.findUnique({
+        where: {
+          emailNormalized
+        }
+      });
+
+      if (existingUser) {
+        await this.recordAuditTx(tx, {
+          eventType: "ACCOUNT_MIGRATION_COMPLETE_REJECTED",
+          success: false,
+          reason: "email_already_exists",
+          gameLogin: session.gameLogin,
+          requestInfo
+        });
+        throw new AppError(409, "CONFLICT", "Nao foi possivel atualizar a conta com estes dados.");
+      }
+
+      const gameAccountId = session.gameAccountId;
+
+      if (!gameAccountId) {
+        await this.recordAuditTx(tx, {
+          eventType: "ACCOUNT_MIGRATION_COMPLETE_REJECTED",
+          success: false,
+          reason: "missing_game_account_id",
+          gameLogin: session.gameLogin,
+          requestInfo
+        });
+        throw new AppError(409, "CONFLICT", "Nao foi possivel atualizar a conta com estes dados.");
+      }
+
+      const accountForLookup = {
+        gameLogin: session.gameLogin,
+        gameAccountId
+      };
+
+      if (await this.findMigratedGameAccountTx(tx, accountForLookup)) {
+        await this.recordAuditTx(tx, {
+          eventType: "ACCOUNT_MIGRATION_COMPLETE_REJECTED",
+          success: false,
+          reason: "game_account_already_migrated",
+          gameLogin: session.gameLogin,
+          requestInfo
+        });
+        throw accountAlreadyMigratedError;
+      }
+
+      await gfLegacyAuthService.updateLegacyPassword({
+        gameLogin: session.gameLogin,
+        gameAccountId,
+        newPassword: parsedInput.newPassword
+      });
+
       const user = await tx.user.create({
         data: {
           name: safeDisplayGameLogin(session.gameLogin),
@@ -225,16 +291,13 @@ export class AccountMigrationService {
         data: {
           userId: user.id,
           gameLogin: session.gameLogin,
-          gameAccountId: session.gameAccountId,
-          status:
-            gamePasswordUpdateStatus === "updated"
-              ? "pending_email_verification"
-              : "pending_game_password_update",
+          gameAccountId,
+          status: "migrated",
           linkedAt: now,
           verifiedAt: now,
           migratedAt: now,
           requiresEmailVerification: true,
-          requiresPasswordUpdate: gamePasswordUpdateStatus !== "updated"
+          requiresPasswordUpdate: false
         }
       });
       const verificationToken = tokenService.generateSecureToken();
@@ -247,44 +310,34 @@ export class AccountMigrationService {
           expiresAt: addHours(now, env.EMAIL_VERIFICATION_TOKEN_TTL_HOURS)
         }
       });
-      await tx.legacyAccountMigrationSession.update({
-        where: {
-          id: session.id
-        },
-        data: {
-          status: "completed",
-          completedAt: now
-        }
-      });
       await tx.securityEvent.create({
         data: {
           userId: user.id,
           eventType: "ACCOUNT_MIGRATION_COMPLETED",
           ipHash: tokenService.hashOptionalValue(requestInfo.ip),
-          userAgent: requestInfo.userAgent,
+          userAgent: tokenService.hashOptionalValue(requestInfo.userAgent),
           metadata: {
             gameAccountId: gameAccount.id,
-            gamePasswordUpdateStatus
+            gamePasswordUpdateStatus: "updated"
           } satisfies Prisma.InputJsonValue
         }
       });
       await this.recordAuditTx(tx, {
         eventType: "ACCOUNT_MIGRATION_COMPLETED",
         success: true,
-        reason: gamePasswordUpdateStatus,
+        reason: "updated",
         gameLogin: session.gameLogin,
         userId: user.id,
         requestInfo,
         metadata: {
           gameAccountId: gameAccount.id,
-          requiresPasswordUpdate: gamePasswordUpdateStatus !== "updated"
+          requiresPasswordUpdate: false
         }
       });
 
       return {
         user,
-        verificationToken,
-        gamePasswordUpdateStatus
+        verificationToken
       };
     });
 
@@ -296,7 +349,7 @@ export class AccountMigrationService {
       status: "email_verification_required" as const,
       message: "Enviamos um link de verificacao para seu e-mail.",
       gameLogin: safeDisplayGameLogin(session.gameLogin),
-      requiresPasswordUpdate: result.gamePasswordUpdateStatus !== "updated"
+      requiresPasswordUpdate: false
     };
   }
 
@@ -328,6 +381,54 @@ export class AccountMigrationService {
     }
 
     return session;
+  }
+
+  private findMigratedGameAccountByLogin(gameLogin: string) {
+    return prisma.gameAccount.findFirst({
+      where: {
+        gameLogin,
+        OR: [
+          {
+            status: {
+              in: ["linked", "migrated", "completed"]
+            }
+          },
+          {
+            migratedAt: {
+              not: null
+            }
+          }
+        ]
+      }
+    });
+  }
+
+  private findMigratedGameAccount(account: VerifiedLegacyGameAccount) {
+    return this.findMigratedGameAccountTx(prisma, account);
+  }
+
+  private findMigratedGameAccountTx(client: Prisma.TransactionClient | typeof prisma, account: GameAccountIdentity) {
+    return client.gameAccount.findFirst({
+      where: {
+        OR: buildGameAccountLookup(account),
+        AND: [
+          {
+            OR: [
+              {
+                status: {
+                  in: ["linked", "migrated", "completed"]
+                }
+              },
+              {
+                migratedAt: {
+                  not: null
+                }
+              }
+            ]
+          }
+        ]
+      }
+    });
   }
 
   private recordAudit(input: {
@@ -362,7 +463,7 @@ export class AccountMigrationService {
         gameLogin: input.gameLogin ?? null,
         userId: input.userId ?? null,
         ipHash: tokenService.hashOptionalValue(input.requestInfo?.ip),
-        userAgent: input.requestInfo?.userAgent ?? null,
+        userAgent: tokenService.hashOptionalValue(input.requestInfo?.userAgent),
         metadata: input.metadata
       }
     });

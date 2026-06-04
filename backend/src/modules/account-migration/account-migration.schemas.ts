@@ -10,7 +10,7 @@ const strongPasswordSchema = z
   .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
 
 export const startAccountMigrationSchema = z.object({
-  gameLogin: z.string().trim().min(3).max(60),
+  gameLogin: z.string().trim().min(3).max(60).regex(/^[A-Za-z0-9]+$/),
   currentPassword: z.string().min(1).max(128)
 });
 

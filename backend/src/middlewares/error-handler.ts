@@ -9,13 +9,14 @@ type FastifyErrorLike = Error & {
 };
 
 const fastifySafeErrorByStatus: Record<number, { code: SafeErrorCode; message: string }> = {
-  400: { code: "BAD_REQUEST", message: "Requisição inválida." },
-  401: { code: "UNAUTHORIZED", message: "Não autorizado." },
+  400: { code: "BAD_REQUEST", message: "Requisicao invalida." },
+  401: { code: "UNAUTHORIZED", message: "Nao autorizado." },
   403: { code: "FORBIDDEN", message: "Acesso negado." },
-  404: { code: "NOT_FOUND", message: "Recurso não encontrado." },
-  409: { code: "CONFLICT", message: "Conflito ao processar requisição." },
-  429: { code: "RATE_LIMITED", message: "Muitas requisições. Tente novamente em instantes." },
-  415: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Tipo de conteúdo não suportado." }
+  404: { code: "NOT_FOUND", message: "Recurso nao encontrado." },
+  409: { code: "CONFLICT", message: "Conflito ao processar requisicao." },
+  429: { code: "RATE_LIMITED", message: "Muitas requisicoes. Tente novamente em instantes." },
+  415: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Tipo de conteudo nao suportado." },
+  503: { code: "SERVICE_UNAVAILABLE", message: "Servico temporariamente indisponivel." }
 };
 
 function getFastifySafeError(error: unknown) {
@@ -33,7 +34,7 @@ function getFastifySafeError(error: unknown) {
     return {
       statusCode: 415,
       code: "UNSUPPORTED_MEDIA_TYPE" as const,
-      message: "Tipo de conteúdo não suportado."
+      message: "Tipo de conteudo nao suportado."
     };
   }
 
@@ -58,7 +59,7 @@ export function registerErrorHandler(app: FastifyInstance) {
 
     if (error instanceof ZodError) {
       request.log.warn({ err: error, requestId: request.id }, "Validation error");
-      reply.status(400).send(safeError("BAD_REQUEST", "Dados inválidos."));
+      reply.status(400).send(safeError("BAD_REQUEST", "Dados invalidos."));
       return;
     }
 
