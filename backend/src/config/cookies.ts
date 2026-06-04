@@ -3,6 +3,7 @@ import { env, isProduction } from "./env.js";
 const secondsPerDay = 24 * 60 * 60;
 
 export const sessionCookieName = env.SESSION_COOKIE_NAME;
+export const accountMigrationCookieName = env.ACCOUNT_MIGRATION_COOKIE_NAME;
 
 export function getSessionCookieOptions() {
   return {
@@ -15,6 +16,25 @@ export function getSessionCookieOptions() {
 }
 
 export function getClearSessionCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: isProduction,
+    path: "/"
+  };
+}
+
+export function getAccountMigrationCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: isProduction,
+    path: "/",
+    maxAge: env.ACCOUNT_MIGRATION_SESSION_TTL_MINUTES * 60
+  };
+}
+
+export function getClearAccountMigrationCookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,

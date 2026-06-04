@@ -107,6 +107,13 @@ export default function Login() {
                 Cadastre-se
               </Link>
             </p>
+
+            <p className="text-center text-sm text-white/75">
+              Tem uma conta antiga?{' '}
+              <Link className="font-bold text-white hover:text-cyan-100" to="/atualizar-conta">
+                Atualizar conta
+              </Link>
+            </p>
           </form>
         </AuthCard>
       </main>

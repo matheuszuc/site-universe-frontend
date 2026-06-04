@@ -411,6 +411,47 @@ button {
   color: rgba(255, 255, 255, 0.88);
 }
 
+.legacy-security-note,
+.legacy-account-found {
+  border: 1px solid rgba(153, 246, 228, 0.22);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.58);
+  padding: 12px 14px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.legacy-account-found strong {
+  color: #fff;
+}
+
+.password-checklist {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.34);
+  padding: 12px 14px;
+}
+
+.password-checklist span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.password-checklist span.valid {
+  color: #99f6e4;
+}
+
+.password-checklist i {
+  font-size: 1rem;
+}
+
 .legal-page {
   min-height: 100vh;
   padding: 132px 20px 56px;

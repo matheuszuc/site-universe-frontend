@@ -35,6 +35,8 @@ model User {
   rewardCycles            UserRewardCycle[]
   rewardCycleEvents       UserRewardCycleProgressEvent[]
   rewardTierClaims        UserRewardTierClaim[]
+  gameAccounts            GameAccount[]
+  accountMigrationAuditLogs AccountMigrationAuditLog[]
 
   @@index([emailNormalized])
   @@map("users")
@@ -429,4 +431,65 @@ model UserRewardTierClaim {
   @@index([status, createdAt])
   @@index([deliveryStatus, createdAt])
   @@map("user_reward_tier_claims")
+}
+
+model GameAccount {
+  id                         String    @id @default(uuid()) @db.Uuid
+  userId                     String    @map("user_id") @db.Uuid
+  gameLogin                  String    @unique @map("game_login")
+  gameAccountId              String?   @unique @map("game_account_id")
+  status                     String
+  linkedAt                   DateTime? @map("linked_at")
+  verifiedAt                 DateTime? @map("verified_at")
+  migratedAt                 DateTime? @map("migrated_at")
+  requiresEmailVerification  Boolean   @default(true) @map("requires_email_verification")
+  requiresPasswordUpdate     Boolean   @default(true) @map("requires_password_update")
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([status])
+  @@map("game_accounts")
+}
+
+model LegacyAccountMigrationSession {
+  id             String    @id @default(uuid()) @db.Uuid
+  sessionTokenHash String  @unique @map("session_token_hash")
+  gameLogin      String    @map("game_login")
+  gameAccountId  String?   @map("game_account_id")
+  status         String
+  expiresAt      DateTime  @map("expires_at")
+  attempts       Int       @default(0)
+  ipHash         String?   @map("ip_hash")
+  userAgentHash  String?   @map("user_agent_hash")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  completedAt    DateTime? @map("completed_at")
+
+  @@index([sessionTokenHash])
+  @@index([gameLogin])
+  @@index([status, expiresAt])
+  @@map("legacy_account_migration_sessions")
+}
+
+model AccountMigrationAuditLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  eventType     String   @map("event_type")
+  success       Boolean
+  reason        String?
+  gameLogin     String?  @map("game_login")
+  userId        String?  @map("user_id") @db.Uuid
+  ipHash        String?  @map("ip_hash")
+  userAgent     String?  @map("user_agent")
+  metadata      Json?    @db.JsonB
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([eventType])
+  @@index([gameLogin])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("account_migration_audit_logs")
 }

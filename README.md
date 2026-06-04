@@ -13,8 +13,9 @@ Este módulo cobre:
 - Recuperação de senha
 - Redefinição de senha
 - Painel do usuário protegido por sessão real
+- Atualização segura de contas antigas, com sessão temporária httpOnly
 
-Não inclui pagamento, recompensas, integração com jogo, loja, carrinho, painel admin, OAuth, 2FA/MFA ou provedor real de e-mail.
+Não inclui gateway real de pagamento, Mercado Pago, Stripe, entrega no jogo, carrinho, painel admin, OAuth, 2FA/MFA ou provedor real de e-mail.
 
 ## Loja de UP e Escala
 
@@ -30,6 +31,17 @@ Não inclui pagamento, recompensas, integração com jogo, loja, carrinho, paine
 - `game_item_id` e interno em `reward_tier_items` e nao aparece nas respostas publicas.
 - A entrega real no GF fica para etapa futura via um servico de integracao de jogo; esta etapa nao chama `age_insertitem` nem acessa bases GF.
 - Nao ha gateway real, Mercado Pago, Stripe, entrega no GF, painel admin ou integracao com gf_ms/gf_ls/FFAccount/tb_user/pvalues nesta etapa.
+
+## Atualização de Conta Antiga
+
+- A rota pública `/atualizar-conta` inicia o fluxo de atualização de contas antigas.
+- A primeira etapa envia somente login do jogo e senha atual para `POST /api/account-migration/start`.
+- Se a conta for validada futuramente por um serviço GF interno, o backend cria uma sessão temporária em cookie httpOnly.
+- A segunda etapa usa `POST /api/account-migration/complete` para cadastrar e-mail e nova senha no Site Universe.
+- `GET /api/account-migration/status` informa apenas se existe uma sessão temporária válida.
+- O frontend não salva senha em URL, `localStorage` ou `sessionStorage`.
+- O backend não expõe `idnum`, hash de senha, `pwd`, `pvalues`, `bonus` ou campos internos GF.
+- O adaptador GF está intencionalmente bloqueado até o formato real de senha/acesso ser confirmado; por isso credenciais antigas não são aceitas nesta etapa.
 
 ## Stack
 
@@ -108,6 +120,10 @@ PASSWORD_RESET_RATE_LIMIT_MAX=5
 PASSWORD_RESET_RATE_LIMIT_WINDOW=15 minutes
 EMAIL_VERIFICATION_RATE_LIMIT_MAX=5
 EMAIL_VERIFICATION_RATE_LIMIT_WINDOW=15 minutes
+ACCOUNT_MIGRATION_COOKIE_NAME=site_universe_migration
+ACCOUNT_MIGRATION_SESSION_TTL_MINUTES=15
+ACCOUNT_MIGRATION_RATE_LIMIT_MAX=5
+ACCOUNT_MIGRATION_RATE_LIMIT_WINDOW=15 minutes
 ```
 
 Não coloque valores reais de segredo no repositório.
@@ -133,6 +149,7 @@ Frontend:
 - `/verify-email?token=...`
 - `/forgot-password`
 - `/reset-password?token=...`
+- `/atualizar-conta`
 - `/painel`
 - `/painel/loja`
 - `/painel/recompensas`
@@ -160,6 +177,12 @@ Backend Loja e Recompensas:
 - `GET /api/rewards/scale`
 - `POST /api/rewards/tiers/:tierCode/claim`
 - `POST /orders`
+
+Backend Atualização de Conta Antiga:
+
+- `POST /api/account-migration/start`
+- `POST /api/account-migration/complete`
+- `GET /api/account-migration/status`
 
 ## Validação antes de avançar
 

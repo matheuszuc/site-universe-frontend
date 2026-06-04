@@ -10,6 +10,11 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
   SESSION_COOKIE_NAME: z.string().min(1).default("site_universe_session"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  ACCOUNT_MIGRATION_COOKIE_NAME: z
+    .string()
+    .min(1)
+    .default("site_universe_migration"),
+  ACCOUNT_MIGRATION_SESSION_TTL_MINUTES: z.coerce.number().int().positive().default(15),
   EMAIL_VERIFICATION_TOKEN_TTL_HOURS: z.coerce.number().int().positive().default(24),
   PASSWORD_RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(30),
   RATE_LIMIT_GLOBAL_MAX: z.coerce.number().int().positive().default(100),
@@ -23,7 +28,9 @@ const envSchema = z.object({
   PASSWORD_RESET_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
   PASSWORD_RESET_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes"),
   EMAIL_VERIFICATION_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
-  EMAIL_VERIFICATION_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes")
+  EMAIL_VERIFICATION_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes"),
+  ACCOUNT_MIGRATION_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
+  ACCOUNT_MIGRATION_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes")
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

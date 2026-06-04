@@ -7,6 +7,7 @@ import PrivacyPolicy from '../pages/PrivacyPolicy'
 import Register from '../pages/Register'
 import ResetPassword from '../pages/ResetPassword'
 import TermsOfUse from '../pages/TermsOfUse'
+import UpdateLegacyAccount from '../pages/UpdateLegacyAccount'
 import UserDashboard from '../pages/UserDashboard'
 import UserRewardScale from '../pages/UserRewardScale'
 import UserStore from '../pages/UserStore'
@@ -22,6 +23,7 @@ export default function AppRoutes() {
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/atualizar-conta" element={<UpdateLegacyAccount />} />
       <Route path="/terms" element={<TermsOfUse />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route
