@@ -1,7 +1,11 @@
 import Button from '../../../components/ui/Button'
 import Card from '../../../components/ui/Card'
 import { formatApAmount } from '../../../data/storePackages'
-import type { RewardTier, RewardTierStatus } from '../../../data/rewardTiers'
+import {
+  getRewardTierPublicTitle,
+  type RewardTier,
+  type RewardTierStatus,
+} from '../../../data/rewardTiers'
 
 const statusLabels: Record<RewardTierStatus, string> = {
   locked: 'Bloqueado',
@@ -20,6 +24,8 @@ const statusClasses: Record<RewardTierStatus, string> = {
 }
 
 type RewardTierCardProps = {
+  isClaiming?: boolean
+  onClaim: (tier: RewardTier) => void
   tier: RewardTier
   onOpen: (tier: RewardTier) => void
 }
@@ -32,7 +38,11 @@ function getRewardSummary(tier: RewardTier) {
   return 'Caixa de recompensas'
 }
 
-function getClaimLabel(status: RewardTierStatus) {
+function getClaimLabel(status: RewardTierStatus, isClaiming: boolean) {
+  if (isClaiming) {
+    return 'Registrando...'
+  }
+
   if (status === 'eligible') {
     return 'Resgatar caixa'
   }
@@ -48,13 +58,23 @@ function getClaimLabel(status: RewardTierStatus) {
   return 'Bloqueado'
 }
 
-export default function RewardTierCard({ tier, onOpen }: RewardTierCardProps) {
+export default function RewardTierCard({
+  isClaiming = false,
+  onClaim,
+  onOpen,
+  tier,
+}: RewardTierCardProps) {
+  const canClaim = tier.status === 'eligible'
+  const rankTitle = getRewardTierPublicTitle(tier)
+
   return (
     <Card className="p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="panel-card-kicker">{tier.name}</p>
-          <h2 className="panel-card-title">{formatApAmount(tier.requiredUpTotal)} AP</h2>
+          <h2 className="panel-card-title">{rankTitle}</h2>
+          <p className="mt-1 text-sm font-bold text-white/60">
+            Meta: {formatApAmount(tier.requiredUpTotal)} AP
+          </p>
         </div>
         <span className={`reward-status-badge ${statusClasses[tier.status]}`}>
           {statusLabels[tier.status]}
@@ -71,9 +91,14 @@ export default function RewardTierCard({ tier, onOpen }: RewardTierCardProps) {
         Ver recompensas
       </Button>
 
-      <Button className="mt-3 w-full" disabled variant={tier.status === 'eligible' ? 'primary' : 'secondary'}>
+      <Button
+        className="mt-3 w-full"
+        disabled={!canClaim || isClaiming}
+        onClick={() => onClaim(tier)}
+        variant={canClaim ? 'primary' : 'secondary'}
+      >
         <i className="bx bx-package text-xl" aria-hidden="true" />
-        {getClaimLabel(tier.status)}
+        {getClaimLabel(tier.status, isClaiming)}
       </Button>
     </Card>
   )

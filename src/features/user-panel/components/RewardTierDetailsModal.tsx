@@ -1,7 +1,12 @@
 import { useEffect, type MouseEvent } from 'react'
 import Button from '../../../components/ui/Button'
 import { formatApAmount } from '../../../data/storePackages'
-import type { RewardItem, RewardTier, RewardTierStatus } from '../../../data/rewardTiers'
+import {
+  getRewardTierPublicTitle,
+  type RewardItem,
+  type RewardTier,
+  type RewardTierStatus,
+} from '../../../data/rewardTiers'
 
 const statusLabels: Record<RewardTierStatus, string> = {
   locked: 'Bloqueado',
@@ -30,16 +35,21 @@ type RewardTierDetailsModalProps = {
 function RewardItemCard({ item }: { item: RewardItem }) {
   return (
     <div className="reward-detail-item">
-      <span className="reward-detail-item-icon" aria-hidden="true">
-        <i className="bx bx-cube" />
-      </span>
       <div>
         <strong>{item.name}</strong>
-        <span>x{item.quantity}</span>
+        <span>Quantidade: {item.quantity}</span>
         {item.description && <p>{item.description}</p>}
       </div>
     </div>
   )
+}
+
+function getRewardSummary(tier: RewardTier) {
+  if (tier.items.length > 0) {
+    return `${tier.items.length} ${tier.items.length === 1 ? 'item na caixa' : 'itens na caixa'}`
+  }
+
+  return 'Caixa de recompensas'
 }
 
 function getActionLabel(status: RewardTierStatus, isClaiming: boolean) {
@@ -71,6 +81,7 @@ export default function RewardTierDetailsModal({
 }: RewardTierDetailsModalProps) {
   const missingUp = Math.max(0, tier.requiredUpTotal - currentUp)
   const canClaim = tier.status === 'eligible'
+  const rankTitle = getRewardTierPublicTitle(tier)
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -109,9 +120,7 @@ export default function RewardTierDetailsModal({
 
         <div className="reward-detail-header">
           <div>
-            <p className="panel-card-kicker">{tier.name}</p>
-            <h2 id="reward-tier-modal-title">{tier.boxName}</h2>
-            <p>{tier.description}</p>
+            <h2 id="reward-tier-modal-title">Recompensas do {rankTitle}</h2>
           </div>
           <span className={`reward-status-badge ${statusClasses[tier.status]}`}>
             {statusLabels[tier.status]}
@@ -120,12 +129,12 @@ export default function RewardTierDetailsModal({
 
         <div className="reward-detail-meta">
           <div>
-            <span>Meta necessária</span>
+            <span>Meta</span>
             <strong>{formatApAmount(tier.requiredUpTotal)} AP</strong>
           </div>
           <div>
-            <span>AP acumulado</span>
-            <strong>{formatApAmount(currentUp)} AP</strong>
+            <span>Caixa visual</span>
+            <strong>{getRewardSummary(tier)}</strong>
           </div>
         </div>
 

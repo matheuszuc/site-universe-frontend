@@ -18,6 +18,7 @@ import { recordPaymentAudit, type AuditRequestInfo } from "../payments/audit.ser
 import { mercadoPagoPixService } from "../payments/providers/mercado-pago-pix.service.js";
 import { userRewardCycleService } from "../rewards/reward-cycle.service.js";
 import { storePackageService } from "../store/store.service.js";
+import { gameDeliveryService } from "../game-delivery/game-delivery.service.js";
 import { createOrderSchema, type CreateOrderInput } from "./orders.schemas.js";
 
 type RequestInfo = AuditRequestInfo & {
@@ -192,6 +193,7 @@ export class OrdersService {
     const parsedInput = createOrderSchema.parse(input) satisfies CreateOrderInput;
     const idempotencyKey = idempotencyKeySchema.parse(getHeaderValue(idempotencyKeyHeader));
     const user = await authService.getCurrentUser(cookies[sessionCookieName], requestInfo);
+    await authService.requireVerifiedUser(user, requestInfo);
     const packageCode = getPackageCode(parsedInput);
     const storePackage = await storePackageService.findActivePackageByCode(packageCode);
 
@@ -447,7 +449,7 @@ export class OrdersService {
   }
 
   async approvePaymentFromVerifiedWebhook(input: ApprovePaymentInput) {
-    return prisma.$transaction(async (tx) => {
+    const approval = await prisma.$transaction(async (tx) => {
       const now = new Date();
 
       await tx.$queryRaw`SELECT "id" FROM "payments" WHERE "id" = ${input.paymentId}::uuid FOR UPDATE`;
@@ -585,6 +587,16 @@ export class OrdersService {
           idempotencyKey: `reward_delivery:${payment.id}`
         }
       });
+      const gameDelivery = await gameDeliveryService.createCreditApDeliveryTx(tx, {
+        userId: payment.userId,
+        orderId: payment.orderId,
+        paymentId: payment.id,
+        rewardDeliveryId: rewardDelivery.id,
+        apAmount: payment.order.rewardAmount,
+        requestInfo: {
+          requestId: input.requestId ?? undefined
+        }
+      });
       await tx.walletTransaction.update({
         where: {
           id: walletTransaction.id
@@ -648,7 +660,9 @@ export class OrdersService {
             success: true,
             metadata: {
               rewardType: rewardDelivery.rewardType,
-              rewardAmount: rewardDelivery.rewardAmount
+              rewardAmount: rewardDelivery.rewardAmount,
+              gameDeliveryId: gameDelivery.id,
+              gameDeliveryStatus: gameDelivery.status
             }
           }
         ]
@@ -660,9 +674,20 @@ export class OrdersService {
         payment: updatedPayment,
         walletTransaction,
         rewardDelivery,
+        gameDelivery,
         progressAdded: progressResult.created
       };
     });
+
+    const gameDelivery = "gameDelivery" in approval ? approval.gameDelivery : null;
+
+    if (!approval.alreadyApproved && gameDelivery?.status === "pending") {
+      await gameDeliveryService.processDeliveryById(gameDelivery.id, {
+        requestId: input.requestId ?? undefined
+      });
+    }
+
+    return approval;
   }
 
   async simulateApprovedPaymentForCurrentUser(
@@ -672,6 +697,7 @@ export class OrdersService {
   ): Promise<SimulateApprovedPaymentResult> {
     const parsedInput = simulateApprovedPaymentSchema.parse(input);
     const user = await authService.getCurrentUser(cookies[sessionCookieName], requestInfo);
+    await authService.requireVerifiedUser(user, requestInfo);
     const order = await prisma.order.findFirst({
       where: {
         orderNumber: parsedInput.orderNumber,
@@ -741,6 +767,7 @@ export class OrdersService {
     requestInfo: RequestInfo = {}
   ) {
     const user = await authService.getCurrentUser(cookies[sessionCookieName], requestInfo);
+    await authService.requireVerifiedUser(user, requestInfo);
     const orders = await prisma.order.findMany({
       where: {
         userId: user.id
@@ -780,6 +807,7 @@ export class OrdersService {
     requestInfo: RequestInfo = {}
   ) {
     const user = await authService.getCurrentUser(cookies[sessionCookieName], requestInfo);
+    await authService.requireVerifiedUser(user, requestInfo);
     const order = await prisma.order.findFirst({
       where: {
         orderNumber,

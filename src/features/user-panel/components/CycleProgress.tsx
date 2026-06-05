@@ -20,8 +20,7 @@ export default function CycleProgress({
     <Card className="p-5">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center">
         <div>
-          <p className="panel-card-kicker">Ciclo atual</p>
-          <h2 className="panel-card-title">{formatApAmount(currentUp)} AP acumulado</h2>
+          <h2 className="panel-card-title">Progresso da escala</h2>
           <p className="mt-3 text-sm leading-relaxed text-white/68">
             Acumule AP comprando pacotes na loja. Ao atingir a meta de cada rank, uma caixa de
             recompensas será liberada. Ao concluir o Rank 6, a escala reinicia em um novo ciclo.
@@ -47,9 +46,6 @@ export default function CycleProgress({
         </div>
       </div>
 
-      <p className="mt-4 text-xs font-bold uppercase tracking-normal text-white/50">
-        O progresso considera somente AP acumulado no site durante este ciclo.
-      </p>
     </Card>
   )
 }

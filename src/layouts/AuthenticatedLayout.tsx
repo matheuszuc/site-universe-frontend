@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { supportDiscordUrl } from '../data/siteLinks'
 import { getApiErrorMessage } from '../services/api'
 
 type AuthenticatedLayoutProps = {
@@ -12,7 +13,7 @@ const navItems = [
   { label: 'Painel', to: '/painel', icon: 'bx-grid-alt' },
   { label: 'Loja', to: '/painel/loja', icon: 'bx-store' },
   { label: 'Recompensas', to: '/painel/recompensas', icon: 'bx-gift' },
-  { label: 'Suporte', to: '#', icon: 'bx-support', disabled: true },
+  { label: 'Suporte', href: supportDiscordUrl, icon: 'bx-support', external: true },
 ]
 
 export default function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
@@ -45,11 +46,17 @@ export default function AuthenticatedLayout({ children }: AuthenticatedLayoutPro
 
         <nav className="panel-nav">
           {navItems.map((item) =>
-            item.disabled ? (
-              <button className="panel-nav-item" disabled key={item.label} type="button">
+            'external' in item ? (
+              <a
+                className="panel-nav-item"
+                href={item.href}
+                key={item.label}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
                 <i className={`bx ${item.icon}`} aria-hidden="true" />
                 <span>{item.label}</span>
-              </button>
+              </a>
             ) : (
               <NavLink className="panel-nav-item" key={item.label} to={item.to}>
                 <i className={`bx ${item.icon}`} aria-hidden="true" />

@@ -81,8 +81,19 @@ export default function UserRewardScale() {
           <p className="panel-hero-kicker">Escala de recompensas</p>
           <h1>Progresso do ciclo</h1>
           <p>
-            A escala usa o AP acumulado no ciclo atual do site. O AP gasto dentro do jogo não
-            reduz este progresso.
+            A escala usa o AP obtido em compras do site. O AP gasto dentro do jogo não reduz
+            este progresso.
+          </p>
+          <p className="reward-youtube-note">
+            Para ver os visuais dos itens, confira no{' '}
+            <a
+              href="https://youtube.com/@life_gx?si=uPc3KTTt9uHIXSzM"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              YouTube
+            </a>
+            .
           </p>
         </section>
 
@@ -114,7 +125,9 @@ export default function UserRewardScale() {
             <section className="reward-grid mt-5" aria-label="Ranks da escala de recompensas">
               {scale.tiers.map((tier) => (
                 <RewardTierCard
+                  isClaiming={claimingTierCode === tier.code}
                   key={tier.code}
+                  onClaim={handleClaim}
                   onOpen={(nextTier) => setSelectedTierCode(nextTier.code)}
                   tier={tier}
                 />

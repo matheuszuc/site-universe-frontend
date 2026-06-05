@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import Card from '../../../components/ui/Card'
+import { supportDiscordUrl } from '../../../data/siteLinks'
 
 type QuickAction =
   | {
@@ -24,7 +25,7 @@ type QuickAction =
 const quickActions: QuickAction[] = [
   { label: 'Loja', icon: 'bx-store', to: '/painel/loja' },
   { label: 'Recompensas', icon: 'bx-gift', to: '/painel/recompensas' },
-  { label: 'Suporte', icon: 'bx-support', href: 'https://discord.com/invite/BbhSuYwZqU', external: true },
+  { label: 'Suporte', icon: 'bx-support', href: supportDiscordUrl, external: true },
   { label: 'Termos', icon: 'bx-file', to: '/terms' },
   { label: 'Privacidade', icon: 'bx-lock-alt', to: '/privacy' },
 ]

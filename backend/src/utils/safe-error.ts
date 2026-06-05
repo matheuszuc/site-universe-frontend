@@ -3,6 +3,7 @@ export type SafeErrorCode =
   | "BAD_REQUEST"
   | "UNAUTHORIZED"
   | "INVALID_CREDENTIALS"
+  | "EMAIL_NOT_VERIFIED"
   | "FORBIDDEN"
   | "FORBIDDEN_ORIGIN"
   | "CSRF_FAILED"

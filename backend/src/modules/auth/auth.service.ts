@@ -1,3 +1,5 @@
+import { randomInt } from "node:crypto";
+
 import type { User } from "@prisma/client";
 
 import { env } from "../../config/env.js";
@@ -19,12 +21,14 @@ import {
   loginSchema,
   registerSchema,
   resetPasswordSchema,
+  verifyEmailCodeSchema,
   verifyEmailQuerySchema,
   type AuthenticatedUser,
   type EmailOnlyInput,
   type LoginInput,
   type RegisterInput,
   type ResetPasswordInput,
+  type VerifyEmailCodeInput,
   type VerifyEmailQuery
 } from "./auth.schemas.js";
 
@@ -56,9 +60,21 @@ const invalidOrExpiredTokenError = new AppError(
   "Token inválido ou expirado."
 );
 
+const invalidVerificationCodeError = new AppError(
+  400,
+  "INVALID_OR_EXPIRED_TOKEN",
+  "Código inválido ou expirado."
+);
+
+const emailNotVerifiedError = new AppError(
+  403,
+  "EMAIL_NOT_VERIFIED",
+  "Confirme seu e-mail antes de acessar sua conta."
+);
+
 const emailVerificationGenericResponse: SuccessResponse = {
   success: true,
-  message: "Se a conta existir e precisar de verificação, enviaremos as instruções."
+  message: "Se este e-mail estiver cadastrado e pendente de confirmação, enviaremos uma nova mensagem."
 };
 
 const forgotPasswordGenericResponse: SuccessResponse = {
@@ -94,7 +110,7 @@ function getNextLockedUntil(failedLoginCount: number) {
 }
 
 function buildFrontendLink(path: string, token: string) {
-  const url = new URL(path, env.FRONTEND_URL);
+  const url = new URL(path, env.APP_PUBLIC_URL);
   url.searchParams.set("token", token);
   return url.toString();
 }
@@ -105,6 +121,17 @@ function addHours(date: Date, hours: number) {
 
 function addMinutes(date: Date, minutes: number) {
   return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
+function addSeconds(date: Date, seconds: number) {
+  return new Date(date.getTime() + seconds * 1000);
+}
+
+function generateVerificationCode(length: number) {
+  const min = 10 ** (length - 1);
+  const max = 10 ** length;
+
+  return String(randomInt(min, max));
 }
 
 export class AuthService {
@@ -146,7 +173,9 @@ export class AuthService {
     const user = await usersService.findByEmail(emailNormalized);
 
     if (user && !user.emailVerifiedAt && !isBlockedUserStatus(user.status)) {
-      await this.requestEmailVerificationForUser(user, requestInfo);
+      await this.requestEmailVerificationForUser(user, requestInfo, {
+        enforceCooldown: true
+      });
     }
 
     return emailVerificationGenericResponse;
@@ -218,6 +247,96 @@ export class AuthService {
     return {
       success: true,
       message: "E-mail verificado com sucesso."
+    };
+  }
+
+  async verifyEmailCode(input: unknown, requestInfo: RequestInfo): Promise<SuccessResponse> {
+    const parsedInput = verifyEmailCodeSchema.parse(input) satisfies VerifyEmailCodeInput;
+    const emailNormalized = normalizeEmail(parsedInput.email);
+    const user = await usersService.findByEmail(emailNormalized);
+
+    if (!user || user.emailVerifiedAt || isBlockedUserStatus(user.status)) {
+      await securityEventsService.record({
+        userId: user?.id ?? null,
+        eventType: "EMAIL_VERIFY_CODE_FAILED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent
+      });
+      throw invalidVerificationCodeError;
+    }
+
+    const verificationToken = await prisma.emailVerificationToken.findFirst({
+      where: {
+        userId: user.id,
+        usedAt: null
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
+
+    if (
+      !verificationToken ||
+      !verificationToken.codeHash ||
+      verificationToken.expiresAt <= new Date() ||
+      verificationToken.codeAttemptCount >= 5
+    ) {
+      await securityEventsService.record({
+        userId: user.id,
+        eventType: "EMAIL_VERIFY_CODE_FAILED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent
+      });
+      throw invalidVerificationCodeError;
+    }
+
+    const codeHash = tokenService.hashToken(parsedInput.code);
+
+    if (verificationToken.codeHash !== codeHash) {
+      await prisma.emailVerificationToken.update({
+        where: {
+          id: verificationToken.id
+        },
+        data: {
+          codeAttemptCount: {
+            increment: 1
+          }
+        }
+      });
+      await securityEventsService.record({
+        userId: user.id,
+        eventType: "EMAIL_VERIFY_CODE_FAILED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent
+      });
+      throw invalidVerificationCodeError;
+    }
+
+    const now = new Date();
+    await prisma.$transaction([
+      prisma.emailVerificationToken.update({
+        where: { id: verificationToken.id },
+        data: { usedAt: now }
+      }),
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerifiedAt: now,
+          status: user.status === "pending_verification" ? "active" : user.status
+        }
+      })
+    ]);
+
+    await securityEventsService.record({
+      userId: user.id,
+      eventType: "EMAIL_VERIFIED_CODE",
+      ip: requestInfo.ip,
+      userAgent: requestInfo.userAgent
+    });
+
+    return {
+      success: true,
+      message: "E-mail confirmado com sucesso."
     };
   }
 
@@ -391,6 +510,16 @@ export class AuthService {
       throw invalidCredentialsError;
     }
 
+    if (env.EMAIL_REQUIRE_VERIFIED && !user.emailVerifiedAt) {
+      await securityEventsService.record({
+        userId: user.id,
+        eventType: "LOGIN_BLOCKED_EMAIL_NOT_VERIFIED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent
+      });
+      throw emailNotVerifiedError;
+    }
+
     const session = await sessionsService.createSession(user.id, requestInfo);
     const updatedUser = await usersService.markLoginSuccess(user.id);
 
@@ -521,11 +650,64 @@ export class AuthService {
     return getSafeUser(session.user);
   }
 
-  private async requestEmailVerificationForUser(user: User, requestInfo: RequestInfo) {
-    const verificationToken = await this.createEmailVerificationToken(user.id);
-    const verificationLink = buildFrontendLink("/verify-email", verificationToken);
+  async requireVerifiedUser(user: AuthenticatedUser, requestInfo: RequestInfo = {}) {
+    if (!env.EMAIL_REQUIRE_VERIFIED || user.emailVerified) {
+      return;
+    }
 
-    await emailService.sendVerificationEmail(user.email, verificationLink);
+    await securityEventsService.record({
+      userId: user.id,
+      eventType: "SENSITIVE_ACTION_BLOCKED_EMAIL_NOT_VERIFIED",
+      ip: requestInfo.ip,
+      userAgent: requestInfo.userAgent
+    });
+    throw emailNotVerifiedError;
+  }
+
+  async requestEmailVerificationForUser(
+    user: User,
+    requestInfo: RequestInfo,
+    options: { enforceCooldown?: boolean } = {}
+  ) {
+    if (options.enforceCooldown) {
+      const cooldownDate = addSeconds(
+        new Date(),
+        -env.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS
+      );
+      const hourlyDate = addHours(new Date(), -1);
+      const [recentToken, hourlyCount] = await Promise.all([
+        prisma.emailVerificationToken.findFirst({
+          where: {
+            userId: user.id,
+            createdAt: {
+              gt: cooldownDate
+            }
+          }
+        }),
+        prisma.emailVerificationToken.count({
+          where: {
+            userId: user.id,
+            createdAt: {
+              gt: hourlyDate
+            }
+          }
+        })
+      ]);
+
+      if (recentToken || hourlyCount >= env.EMAIL_VERIFICATION_MAX_PER_HOUR) {
+        return;
+      }
+    }
+
+    const verification = await this.createEmailVerificationToken(user, requestInfo);
+    const verificationLink = buildFrontendLink("/verificar-email", verification.token);
+
+    await emailService.sendVerificationEmail({
+      email: user.email,
+      verificationCode: verification.code,
+      verificationLink,
+      expiresInMinutes: env.EMAIL_VERIFICATION_EXPIRES_MINUTES
+    });
     await securityEventsService.record({
       userId: user.id,
       eventType: "EMAIL_VERIFY_REQUESTED",
@@ -534,15 +716,17 @@ export class AuthService {
     });
   }
 
-  private async createEmailVerificationToken(userId: string) {
+  private async createEmailVerificationToken(user: User, requestInfo: RequestInfo) {
     const now = new Date();
     const token = tokenService.generateSecureToken();
+    const code = generateVerificationCode(env.EMAIL_VERIFICATION_CODE_LENGTH);
     const tokenHash = tokenService.hashToken(token);
+    const codeHash = tokenService.hashToken(code);
 
     await prisma.$transaction([
       prisma.emailVerificationToken.updateMany({
         where: {
-          userId,
+          userId: user.id,
           usedAt: null
         },
         data: {
@@ -551,14 +735,21 @@ export class AuthService {
       }),
       prisma.emailVerificationToken.create({
         data: {
-          userId,
+          userId: user.id,
           tokenHash,
-          expiresAt: addHours(now, env.EMAIL_VERIFICATION_TOKEN_TTL_HOURS)
+          codeHash,
+          sentToEmail: user.email,
+          requestIpHash: tokenService.hashOptionalValue(requestInfo.ip),
+          userAgentHash: tokenService.hashOptionalValue(requestInfo.userAgent),
+          expiresAt: addMinutes(now, env.EMAIL_VERIFICATION_EXPIRES_MINUTES)
         }
       })
     ]);
 
-    return token;
+    return {
+      token,
+      code
+    };
   }
 
   private async createPasswordResetToken(userId: string, requestInfo: RequestInfo) {

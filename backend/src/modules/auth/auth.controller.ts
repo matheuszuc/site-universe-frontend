@@ -61,6 +61,12 @@ export async function verifyEmailController(request: FastifyRequest, reply: Fast
   reply.send(result);
 }
 
+export async function verifyEmailCodeController(request: FastifyRequest, reply: FastifyReply) {
+  const result = await authService.verifyEmailCode(request.body, getRequestInfo(request));
+
+  reply.send(result);
+}
+
 export async function forgotPasswordController(request: FastifyRequest, reply: FastifyReply) {
   const result = await authService.forgotPassword(request.body, getRequestInfo(request));
 

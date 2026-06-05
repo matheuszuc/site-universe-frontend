@@ -4,7 +4,7 @@ import { env } from "../../config/env.js";
 import { prisma } from "../../database/prisma.js";
 import { normalizeEmail } from "../../utils/normalize-email.js";
 import { AppError } from "../../utils/safe-error.js";
-import { emailService } from "../email/email.service.js";
+import { authService } from "../auth/auth.service.js";
 import { passwordService } from "../security/password.service.js";
 import { tokenService } from "../security/token.service.js";
 import {
@@ -36,16 +36,6 @@ const accountAlreadyMigratedError = new AppError(
 
 function addMinutes(date: Date, minutes: number) {
   return new Date(date.getTime() + minutes * 60 * 1000);
-}
-
-function addHours(date: Date, hours: number) {
-  return new Date(date.getTime() + hours * 60 * 60 * 1000);
-}
-
-function buildFrontendLink(path: string, token: string) {
-  const url = new URL(path, env.FRONTEND_URL);
-  url.searchParams.set("token", token);
-  return url.toString();
 }
 
 function normalizeGameLogin(gameLogin: string) {
@@ -300,16 +290,6 @@ export class AccountMigrationService {
           requiresPasswordUpdate: false
         }
       });
-      const verificationToken = tokenService.generateSecureToken();
-      const verificationTokenHash = tokenService.hashToken(verificationToken);
-
-      await tx.emailVerificationToken.create({
-        data: {
-          userId: user.id,
-          tokenHash: verificationTokenHash,
-          expiresAt: addHours(now, env.EMAIL_VERIFICATION_TOKEN_TTL_HOURS)
-        }
-      });
       await tx.securityEvent.create({
         data: {
           userId: user.id,
@@ -336,18 +316,16 @@ export class AccountMigrationService {
       });
 
       return {
-        user,
-        verificationToken
+        user
       };
     });
 
-    const verificationLink = buildFrontendLink("/verify-email", result.verificationToken);
-    await emailService.sendVerificationEmail(emailNormalized, verificationLink);
+    await authService.requestEmailVerificationForUser(result.user, requestInfo);
 
     return {
       success: true,
       status: "email_verification_required" as const,
-      message: "Enviamos um link de verificacao para seu e-mail.",
+      message: "Enviamos um codigo de confirmacao para seu e-mail.",
       gameLogin: safeDisplayGameLogin(session.gameLogin),
       requiresPasswordUpdate: false
     };

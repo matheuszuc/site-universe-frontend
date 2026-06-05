@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import AuthCard from '../components/auth/AuthCard'
 import AuthHeader from '../components/auth/AuthHeader'
@@ -24,7 +24,9 @@ export default function VerifyEmail() {
   const { email } = (location.state ?? {}) as VerifyEmailState
   const token = searchParams.get('token')?.trim() ?? ''
   const activeTokenRef = useRef<string | null>(null)
+  const [code, setCode] = useState('')
   const [cooldown, setCooldown] = useState(0)
+  const [isConfirmingCode, setIsConfirmingCode] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [message, setMessage] = useState<string>()
   const [errorMessage, setErrorMessage] = useState<string>()
@@ -39,7 +41,7 @@ export default function VerifyEmail() {
 
     if (!token) {
       setVerificationStatus('idle')
-      setMessage('Enviamos um link de verificação para seu e-mail.')
+      setMessage('Enviamos um código de confirmação para seu e-mail. Confirme para liberar sua conta.')
       return
     }
 
@@ -112,6 +114,35 @@ export default function VerifyEmail() {
     }
   }
 
+  async function handleConfirmCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!email) {
+      setErrorMessage('Informe o e-mail para confirmar o código.')
+      return
+    }
+
+    if (!/^\d{6,8}$/.test(code.trim())) {
+      setErrorMessage('Informe o código de confirmação recebido por e-mail.')
+      return
+    }
+
+    setIsConfirmingCode(true)
+    setMessage(undefined)
+    setErrorMessage(undefined)
+
+    try {
+      const result = await authApi.verifyEmailCode(email, code.trim())
+      setVerificationStatus('success')
+      setMessage(result.message)
+    } catch (error) {
+      setVerificationStatus('error')
+      setErrorMessage(getApiErrorMessage(error))
+    } finally {
+      setIsConfirmingCode(false)
+    }
+  }
+
   return (
     <PublicLayout variant="auth">
       <main className="auth-main">
@@ -126,6 +157,37 @@ export default function VerifyEmail() {
 
             {message && <Alert tone="success">{message}</Alert>}
             {errorMessage && <Alert tone="error">{errorMessage}</Alert>}
+
+            {verificationStatus !== 'success' && (
+              <form className="space-y-3" onSubmit={handleConfirmCode}>
+                <div>
+                  <label className="auth-label" htmlFor="verification-code">
+                    Código de confirmação
+                  </label>
+                  <input
+                    autoComplete="one-time-code"
+                    className="min-h-12 w-full rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-center text-lg font-black tracking-[0.24em] text-white outline-none transition placeholder:text-white/35 focus:border-cyan-200"
+                    disabled={!email || isConfirmingCode}
+                    id="verification-code"
+                    inputMode="numeric"
+                    maxLength={8}
+                    onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="000000"
+                    value={code}
+                  />
+                </div>
+
+                <LoadingButton
+                  className="w-full"
+                  disabled={!email || isConfirmingCode}
+                  isLoading={isConfirmingCode}
+                  loadingText="Confirmando..."
+                  type="submit"
+                >
+                  Confirmar e-mail
+                </LoadingButton>
+              </form>
+            )}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Link className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-white/60 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/20" to="/login">

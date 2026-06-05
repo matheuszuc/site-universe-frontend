@@ -1,5 +1,12 @@
 import { apiRequest } from '../../../services/api'
-import type { RewardItem, RewardTier, RewardTierStatus } from '../../../data/rewardTiers'
+import {
+  getRewardTierPublicTitle,
+  getRewardTierRankNumber,
+  getRewardTierRequiredAp,
+  type RewardItem,
+  type RewardTier,
+  type RewardTierStatus,
+} from '../../../data/rewardTiers'
 
 type BackendRewardItem = {
   itemName: string
@@ -46,34 +53,79 @@ export type RewardScale = {
   tiers: RewardTier[]
 }
 
-function getBoxName(tierName: string) {
-  return `Caixa ${tierName}`
+const publicBoxContentsByTierCode: Record<string, RewardItem[]> = {
+  rank_1: [
+    { name: 'Barros de Alquimia', quantity: 35 },
+    { name: 'Gaias lvl 4', quantity: 10 },
+    { name: 'Inscrição lvl 3 (+10)', quantity: 5 },
+    { name: 'Trevo de Alquimia 100%', quantity: 2 },
+    { name: 'Formão Cristal 100%', quantity: 5 },
+    { name: 'Pedra da Amizade (+50% Mov. Speed)', quantity: 1, description: '15 dias' },
+    { name: 'Encantamentos Lendário lvl 2', quantity: 20 },
+    { name: 'Caixa de Amuleto XP (25%/50%/75%/100%)', quantity: 1 },
+    { name: 'Peças de Alquimia', quantity: 100 },
+  ],
+  rank_2: [
+    { name: 'Barros de Alquimia', quantity: 40 },
+    { name: 'Gaias lvl 4', quantity: 30 },
+    { name: 'Caixa de Pedras Critic - (Dano 10% e Taxa 1,8%)', quantity: 2 },
+    { name: 'Legado à escolha (31-60)', quantity: 1 },
+    { name: 'Mochila (30 slots)', quantity: 2 },
+    { name: 'Mochila Sprite (20 slots)', quantity: 2 },
+    { name: 'Talent Universe Coin', quantity: 2 },
+    { name: 'Cartão VIP Sprite da Glória (LVL 1)', quantity: 1 },
+    { name: 'Peças de Alquimia', quantity: 100 },
+  ],
+  rank_3: [
+    { name: 'Barros Alquimia', quantity: 45 },
+    { name: 'Caixa de Pedras Critic - (Dano 10% e Taxa 1,8%)', quantity: 2 },
+    { name: 'Inscrição lvl 3 (+10)', quantity: 10 },
+    { name: 'Trevo de Alquimia 100%', quantity: 5 },
+    { name: 'Formão Cristal 100%', quantity: 10 },
+    { name: 'Encantamentos Lendário lvl 2', quantity: 30 },
+    { name: 'Talent Universe Coin', quantity: 2 },
+    { name: 'Montaria Esquilo de CBT', quantity: 1 },
+    { name: 'Peças de Alquimia', quantity: 100 },
+  ],
+  rank_4: [
+    { name: 'Barros Alquimia', quantity: 50 },
+    { name: 'Caixa de Pedras Critic - (Dano 10% e Taxa 1,8%)', quantity: 2 },
+    { name: 'Encantamentos Lendário lvl 2', quantity: 50 },
+    { name: 'Máscara de Combate (PVE) "Doce"', quantity: 1, description: '25 dias' },
+    { name: 'Mochila (30 slots)', quantity: 2 },
+    { name: 'Mochila Sprite (20 slots)', quantity: 2 },
+    { name: 'Caixa de Fantasias Exclusiva (escolha 4 skins)', quantity: 1 },
+    { name: 'Talent Universe Coin', quantity: 2 },
+    { name: 'Montaria de Rena CBT', quantity: 1 },
+    { name: 'Peças de Alquimia', quantity: 150 },
+  ],
+  rank_5: [
+    { name: 'Barros Alquimia', quantity: 60 },
+    { name: 'Caixa de Pedras Critic - (Dano 10% e Taxa 1,8%)', quantity: 2 },
+    { name: 'Encantamentos Lendário lvl 2', quantity: 100 },
+    { name: 'Mochila (30 slots)', quantity: 2 },
+    { name: 'Mochila Sprite (20 slots)', quantity: 2 },
+    { name: 'Caixa de Montaria Exclusiva (Escolhe x1)', quantity: 1 },
+    { name: 'Caixa de Títulos Exclusivos', quantity: 1 },
+    { name: 'Caixa de Núcleo Transitórios (escolha 1)', quantity: 1 },
+    { name: 'Peças de Alquimia', quantity: 200 },
+  ],
+  rank_6: [
+    { name: 'Barros Alquimia', quantity: 70 },
+    { name: 'Surpresa GM Exclusiva', quantity: 1 },
+    { name: 'Título "Senhor do Eclipse"', quantity: 1 },
+    { name: 'Montaria de DG (125%)', quantity: 1 },
+    { name: 'Cartão VIP Alquimia Nobre (LVL 2)', quantity: 1 },
+    { name: 'Peças de Alquimia', quantity: 250 },
+  ],
 }
 
 function getRankNumber(tier: BackendRewardTier) {
-  return tier.name.match(/\d+/)?.[0] ?? tier.code.match(/\d+/)?.[0] ?? '1'
+  return getRewardTierRankNumber(tier)
 }
 
-function getFallbackBoxContents(tier: BackendRewardTier): RewardItem[] {
-  const rankNumber = getRankNumber(tier)
-
-  return [
-    {
-      name: `Cristais Rank ${rankNumber}`,
-      quantity: Number(rankNumber),
-      description: 'Conteúdo visual da caixa para este marco da escala.',
-    },
-    {
-      name: 'Poção especial',
-      quantity: Math.max(1, Number(rankNumber) * 2),
-      description: 'Item de apoio exibido como referência pública da recompensa.',
-    },
-    {
-      name: 'Bilhete de suporte',
-      quantity: 1,
-      description: 'Item visual complementar da caixa deste rank.',
-    },
-  ]
+function getBoxName(tier: BackendRewardTier) {
+  return `Escala Rank ${getRankNumber(tier)}`
 }
 
 function normalizePublicName(name: string) {
@@ -92,6 +144,12 @@ function isDeliveredBoxItem(item: BackendRewardItem, boxName: string) {
 }
 
 function normalizeRewardItems(tier: BackendRewardTier, boxName: string): RewardItem[] {
+  const publicItems = publicBoxContentsByTierCode[tier.code]
+
+  if (publicItems) {
+    return publicItems
+  }
+
   const visualItems = tier.items
     .filter((item) => !isDeliveredBoxItem(item, boxName))
     .map((item) => ({
@@ -100,24 +158,38 @@ function normalizeRewardItems(tier: BackendRewardTier, boxName: string): RewardI
       description: item.itemDescription ?? undefined,
     }))
 
-  return visualItems.length > 0 ? visualItems : getFallbackBoxContents(tier)
+  return visualItems.length > 0
+    ? visualItems
+    : [
+        {
+          name: `Caixa do ${getRewardTierPublicTitle(tier)}`,
+          quantity: 1,
+          description: 'Conteúdo público da caixa deste rank.',
+        },
+      ]
 }
 
 function normalizeTier(tier: BackendRewardTier): RewardTier {
-  const boxName = getBoxName(tier.name)
+  const boxName = getBoxName(tier)
+  const rankTitle = getRewardTierPublicTitle(tier)
+  const requiredUpTotal = getRewardTierRequiredAp(tier)
 
   return {
     code: tier.code,
-    name: tier.name,
+    name: rankTitle,
     boxName,
-    requiredUpTotal: tier.requiredUpTotal,
+    requiredUpTotal,
     status: tier.status,
-    description: `${boxName} com recompensas deste marco da escala.`,
+    description: `Recompensas do ${rankTitle}.`,
     items: normalizeRewardItems(tier, boxName),
   }
 }
 
 function normalizeScale(response: BackendRewardScaleResponse): RewardScale {
+  const nextRankRequiredAp = response.nextTier
+    ? getRewardTierRequiredAp(response.nextTier)
+    : undefined
+
   return {
     currentCycle: {
       cycleNumber: response.currentCycle.cycleNumber,
@@ -127,9 +199,13 @@ function normalizeScale(response: BackendRewardScaleResponse): RewardScale {
     nextRank: response.nextTier
       ? {
           code: response.nextTier.code,
-          name: response.nextTier.name,
-          requiredAp: response.nextTier.requiredUpTotal,
-          missingAp: response.nextTier.missingUp,
+          name: getRewardTierPublicTitle(response.nextTier),
+          requiredAp: nextRankRequiredAp ?? response.nextTier.requiredUpTotal,
+          missingAp: Math.max(
+            0,
+            (nextRankRequiredAp ?? response.nextTier.requiredUpTotal) -
+              response.currentCycle.accumulatedUp,
+          ),
         }
       : null,
     tiers: response.tiers.map(normalizeTier),

@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import ForgotPassword from '../pages/ForgotPassword'
 import Home from '../pages/Home'
+import Download from '../pages/Download'
 import Login from '../pages/Login'
 import NotFound from '../pages/NotFound'
 import PrivacyPolicy from '../pages/PrivacyPolicy'
@@ -18,9 +19,11 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/download" element={<Download />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/verificar-email" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/atualizar-conta" element={<UpdateLegacyAccount />} />

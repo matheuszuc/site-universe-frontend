@@ -30,6 +30,7 @@ export async function getRewardScaleController(
     request.cookies[sessionCookieName],
     getRequestInfo(request)
   );
+  await authService.requireVerifiedUser(user, getRequestInfo(request));
   const scale = await userRewardCycleService.getCurrentScaleProgress(user.id);
 
   reply.send(scale);
@@ -43,6 +44,7 @@ export async function claimRewardTierController(
     request.cookies[sessionCookieName],
     getRequestInfo(request)
   );
+  await authService.requireVerifiedUser(user, getRequestInfo(request));
   const params = rewardTierParamsSchema.parse(request.params);
   const body = claimRewardTierBodySchema.parse(request.body ?? {});
   const idempotencyKey = idempotencyKeySchema.parse(

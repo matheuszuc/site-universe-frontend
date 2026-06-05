@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "../../database/prisma.js";
 import { AppError } from "../../utils/safe-error.js";
+import { gameDeliveryService } from "../game-delivery/game-delivery.service.js";
 import { addHours, addMinutes, hashRequest } from "../idempotency/idempotency.utils.js";
 import { recordPaymentAudit, type AuditRequestInfo } from "../payments/audit.service.js";
 
@@ -28,6 +29,10 @@ type ClaimInput = {
 };
 
 const rewardTierClaimScope = "reward_tier_claim";
+
+export function calculateRewardCycleCarryOver(accumulatedUp: number, finalThreshold: number) {
+  return Math.max(accumulatedUp - finalThreshold, 0);
+}
 
 function toPublicTier(tier: {
   code: string;
@@ -266,7 +271,7 @@ export class UserRewardCycleService {
     }
 
     try {
-      return await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         const now = new Date();
         const idempotency = await tx.idempotencyKey.create({
           data: {
@@ -337,42 +342,23 @@ export class UserRewardCycleService {
           throw new AppError(409, "CONFLICT", "AP acumulado insuficiente para este rank.");
         }
 
-        const previousTiers = await tx.rewardTier.findMany({
-          where: {
-            isActive: true,
-            displayOrder: {
-              lt: tier.displayOrder
-            }
-          },
-          select: {
-            id: true
-          }
-        });
-        const previousClaims = previousTiers.length
-          ? await tx.userRewardTierClaim.count({
-              where: {
-                userRewardCycleId: cycle.id,
-                rewardTierId: {
-                  in: previousTiers.map((previousTier) => previousTier.id)
-                }
-              }
-            })
-          : 0;
-
-        if (previousClaims !== previousTiers.length) {
+        if (!tier.boxGameItemId) {
           await recordPaymentAudit(tx, {
             actorType: "user",
             actorId: input.userId,
-            eventType: "REWARD_TIER_CLAIM_REJECTED_PREVIOUS_RANKS_REQUIRED",
+            eventType: "REWARD_TIER_CLAIM_REJECTED_MISSING_BOX_ITEM_ID",
             entityType: "reward_tier",
             entityId: tier.id,
             userId: input.userId,
             idempotencyKey: input.idempotencyKey,
             requestInfo: input.requestInfo,
             success: false,
-            reason: "previous_ranks_required"
+            reason: "missing_box_game_item_id",
+            metadata: {
+              tierCode: tier.code
+            }
           });
-          throw new AppError(409, "CONFLICT", "Resgate os ranks anteriores primeiro.");
+          throw new AppError(409, "CONFLICT", "Recompensa indisponivel no momento.");
         }
 
         const existingClaim = await tx.userRewardTierClaim.findUnique({
@@ -411,6 +397,26 @@ export class UserRewardCycleService {
             idempotencyKey: input.idempotencyKey
           }
         });
+        const gameDelivery = await gameDeliveryService.createRewardBoxDeliveryTx(tx, {
+          userId: input.userId,
+          userRewardCycleId: cycle.id,
+          rewardTierClaimId: claim.id,
+          rewardTierCode: tier.code,
+          itemId: tier.boxGameItemId,
+          requestInfo: input.requestInfo
+        });
+
+        if (gameDelivery.status === "failed") {
+          await tx.userRewardTierClaim.update({
+            where: {
+              id: claim.id
+            },
+            data: {
+              deliveryStatus: "failed"
+            }
+          });
+        }
+
         const lastTier = await tx.rewardTier.findFirst({
           where: {
             isActive: true
@@ -419,9 +425,27 @@ export class UserRewardCycleService {
             displayOrder: "desc"
           }
         });
+        const activeTierCount = await tx.rewardTier.count({
+          where: {
+            isActive: true
+          }
+        });
+        const claimedTierCount = await tx.userRewardTierClaim.count({
+          where: {
+            userRewardCycleId: cycle.id
+          }
+        });
+        const shouldCompleteCycle = Boolean(
+          lastTier && activeTierCount > 0 && claimedTierCount === activeTierCount
+        );
         let nextCycle: { cycleNumber: number; accumulatedUp: number; status: string } | null = null;
 
-        if (lastTier?.id === tier.id) {
+        if (shouldCompleteCycle && lastTier) {
+          const carryOverUp = calculateRewardCycleCarryOver(
+            cycle.accumulatedUp,
+            lastTier.requiredUpTotal
+          );
+
           await tx.userRewardCycle.update({
             where: {
               id: cycle.id
@@ -437,7 +461,7 @@ export class UserRewardCycleService {
               userId: input.userId,
               cycleNumber: cycle.cycleNumber + 1,
               status: "active",
-              accumulatedUp: 0,
+              accumulatedUp: carryOverUp,
               startedAt: now
             }
           });
@@ -456,19 +480,29 @@ export class UserRewardCycleService {
             requestInfo: input.requestInfo,
             success: true,
             metadata: {
-              completedByTier: tier.code
+              completedByTier: tier.code,
+              claimedTierCount,
+              activeTierCount,
+              accumulatedUp: cycle.accumulatedUp,
+              finalThreshold: lastTier.requiredUpTotal,
+              carryOverUp
             }
           });
           await recordPaymentAudit(tx, {
             actorType: "system",
-            eventType: "REWARD_CYCLE_RESET_STARTED",
+            eventType: "REWARD_CYCLE_ROLLOVER_CARRY_OVER",
             entityType: "user_reward_cycle",
             entityId: createdNextCycle.id,
             userId: input.userId,
             requestInfo: input.requestInfo,
             success: true,
             metadata: {
-              previousCycleId: cycle.id
+              previousCycleId: cycle.id,
+              sourceCycleId: cycle.id,
+              accumulatedUp: cycle.accumulatedUp,
+              finalThreshold: lastTier.requiredUpTotal,
+              carryOverUp,
+              reason: "cycle_rollover_carry_over"
             }
           });
         }
@@ -484,7 +518,12 @@ export class UserRewardCycleService {
           cycle: {
             cycleNumber: cycle.cycleNumber,
             accumulatedUp: cycle.accumulatedUp,
-            status: lastTier?.id === tier.id ? "completed" : cycle.status
+            status: shouldCompleteCycle ? "completed" : cycle.status
+          },
+          gameDelivery: {
+            id: gameDelivery.id,
+            type: gameDelivery.type,
+            status: gameDelivery.status
           },
           nextCycle
         };
@@ -518,9 +557,19 @@ export class UserRewardCycleService {
 
         return {
           statusCode: 201,
-          body: responseBody
+          body: responseBody,
+          gameDelivery
         };
       });
+
+      if (result.gameDelivery.status === "pending") {
+        await gameDeliveryService.processDeliveryById(result.gameDelivery.id, input.requestInfo);
+      }
+
+      return {
+        statusCode: result.statusCode,
+        body: result.body
+      };
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

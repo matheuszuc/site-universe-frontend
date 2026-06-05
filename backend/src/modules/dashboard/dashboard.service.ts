@@ -1,4 +1,5 @@
 import { sessionCookieName } from "../../config/cookies.js";
+import { env } from "../../config/env.js";
 import { AppError } from "../../utils/safe-error.js";
 import { authCookieSchema } from "../auth/auth.schemas.js";
 import { mercadoPagoPixService } from "../payments/providers/mercado-pago-pix.service.js";
@@ -109,6 +110,16 @@ export class DashboardService {
 
     if (!user) {
       throw new AppError(401, "UNAUTHORIZED", "Não autorizado.");
+    }
+
+    if (env.EMAIL_REQUIRE_VERIFIED && !user.emailVerifiedAt) {
+      await securityEventsService.record({
+        userId: user.id,
+        eventType: "DASHBOARD_BLOCKED_EMAIL_NOT_VERIFIED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent
+      });
+      throw new AppError(403, "EMAIL_NOT_VERIFIED", "Confirme seu e-mail para continuar.");
     }
 
     await sessionsService.touch(session.id);

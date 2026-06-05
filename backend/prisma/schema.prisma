@@ -36,6 +36,7 @@ model User {
   rewardCycleEvents       UserRewardCycleProgressEvent[]
   rewardTierClaims        UserRewardTierClaim[]
   gameAccounts            GameAccount[]
+  gameDeliveries          GameDelivery[]
   accountMigrationAuditLogs AccountMigrationAuditLog[]
 
   @@index([emailNormalized])
@@ -63,16 +64,22 @@ model Session {
 }
 
 model EmailVerificationToken {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
-  tokenHash String    @unique @map("token_hash")
-  expiresAt DateTime  @map("expires_at")
-  usedAt    DateTime? @map("used_at")
-  createdAt DateTime  @default(now()) @map("created_at")
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  tokenHash        String    @unique @map("token_hash")
+  codeHash         String?   @map("code_hash")
+  expiresAt        DateTime  @map("expires_at")
+  usedAt           DateTime? @map("used_at")
+  sentToEmail      String?   @map("sent_to_email")
+  requestIpHash    String?   @map("request_ip_hash")
+  userAgentHash    String?   @map("user_agent_hash")
+  codeAttemptCount Int       @default(0) @map("code_attempt_count")
+  createdAt        DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, createdAt])
   @@index([expiresAt])
   @@map("email_verification_tokens")
 }
@@ -151,6 +158,7 @@ model Order {
   payments           Payment[]                       @relation("OrderPayments")
   walletTransactions WalletTransaction[]
   rewardDeliveries   RewardDelivery[]
+  gameDeliveries     GameDelivery[]
   paymentAuditLogs   PaymentAuditLog[]
   rewardCycleEvents  UserRewardCycleProgressEvent[]
 
@@ -183,6 +191,7 @@ model Payment {
   currentForOrders   Order[]                          @relation("OrderCurrentPayment")
   walletTransactions WalletTransaction[]
   rewardDeliveries   RewardDelivery[]
+  gameDeliveries     GameDelivery[]
   paymentAuditLogs   PaymentAuditLog[]
   rewardCycleEvents  UserRewardCycleProgressEvent[]
 
@@ -257,6 +266,7 @@ model RewardDelivery {
   walletSource      WalletTransaction[]   @relation("WalletRewardDelivery")
   paymentAuditLogs  PaymentAuditLog[]
   tierClaims        UserRewardTierClaim[]
+  gameDeliveries    GameDelivery[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([status, nextRetryAt])
@@ -328,6 +338,7 @@ model RewardTier {
   code            String   @unique
   name            String
   requiredUpTotal Int      @map("required_up_total")
+  boxGameItemId   Int?     @map("box_game_item_id")
   displayOrder    Int      @unique @map("display_order")
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at")
@@ -338,6 +349,47 @@ model RewardTier {
 
   @@index([isActive, displayOrder])
   @@map("reward_tiers")
+}
+
+model GameDelivery {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  type             String
+  status           String    @default("pending")
+  idempotencyKey   String    @unique @map("idempotency_key")
+  orderId          String?   @map("order_id") @db.Uuid
+  paymentId        String?   @map("payment_id") @db.Uuid
+  rewardDeliveryId String?   @map("reward_delivery_id") @db.Uuid
+  rewardTierClaimId String?  @unique @map("reward_tier_claim_id") @db.Uuid
+  rewardTierCode   String?   @map("reward_tier_code")
+  gfAccountName    String?   @map("gf_account_name")
+  apAmount         Int?      @map("ap_amount")
+  itemId           Int?      @map("item_id")
+  itemQuantity     Int?      @map("item_quantity")
+  point            Int?      @default(0)
+  attempts         Int       @default(0)
+  maxAttempts      Int       @default(5) @map("max_attempts")
+  lastError        String?   @map("last_error")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deliveredAt      DateTime? @map("delivered_at")
+  lockedAt         DateTime? @map("locked_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  order          Order?          @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  payment        Payment?        @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  rewardDelivery RewardDelivery? @relation(fields: [rewardDeliveryId], references: [id], onDelete: Restrict)
+  rewardTierClaim UserRewardTierClaim? @relation(fields: [rewardTierClaimId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+  @@index([type, status])
+  @@index([orderId])
+  @@index([paymentId])
+  @@index([rewardDeliveryId])
+  @@index([rewardTierClaimId])
+  @@index([rewardTierCode])
+  @@map("game_deliveries")
 }
 
 model RewardTierItem {
@@ -423,6 +475,7 @@ model UserRewardTierClaim {
   userRewardCycle   UserRewardCycle  @relation(fields: [userRewardCycleId], references: [id], onDelete: Restrict)
   rewardTier        RewardTier       @relation(fields: [rewardTierId], references: [id], onDelete: Restrict)
   rewardDelivery    RewardDelivery?  @relation(fields: [rewardDeliveryId], references: [id], onDelete: Restrict)
+  gameDelivery      GameDelivery?
 
   @@unique([userRewardCycleId, rewardTierId])
   @@index([userId, createdAt(sort: Desc)])

@@ -15,7 +15,7 @@ Este módulo cobre:
 - Painel do usuário protegido por sessão real
 - Atualização segura de contas antigas, com sessão temporária httpOnly
 
-Não inclui gateway de pagamento em produção, Stripe, entrega no jogo, carrinho, painel admin, OAuth, 2FA/MFA ou provedor real de e-mail.
+Não inclui Stripe, Banco Inter, carrinho, painel admin, OAuth, 2FA/MFA ou provedor real de e-mail.
 
 ## Loja de AP e Escala
 
@@ -33,16 +33,20 @@ Não inclui gateway de pagamento em produção, Stripe, entrega no jogo, carrinh
 - O webhook público `POST /webhooks/mercado-pago` valida a assinatura recebida, consulta o pagamento server-to-server e só então chama `approvePaymentFromVerifiedWebhook`.
 - A aprovacao de pagamento fica somente na funcao interna `approvePaymentFromVerifiedWebhook`, após validação real do provider.
 - Compras aprovadas no Site Universe somam AP ao ciclo ativo da escala por `user_reward_cycle_progress_events`.
-- O AP acumulado da escala e separado do AP dentro do jogo.
+- Compras aprovadas tambem criam `game_deliveries` do tipo `CREDIT_AP` para credito em `gf_ms.tb_user.pvalues`.
+- O backend usa somente o pedido/pagamento aprovado para definir AP; o frontend nao envia AP, preco, `userId` ou conta GF.
 - A tela da escala carrega progresso, status dos ranks e itens das caixas por `GET /api/rewards/scale`.
 - Cada rank pode ser resgatado uma vez por ciclo em `user_reward_tier_claims`.
-- O resgate de caixa usa `POST /api/rewards/tiers/:tierCode/claim` com `Idempotency-Key` e nao entrega item no GF.
-- Ranks precisam ser resgatados em sequencia.
-- O resgate do Rank 6 encerra o ciclo atual e cria um novo ciclo ativo com `accumulated_up = 0`.
-- `game_item_id` e interno em `reward_tier_items` e nao aparece nas respostas publicas.
-- A entrega real no GF fica para etapa futura via um servico de integracao de jogo; esta etapa nao chama `age_insertitem` nem acessa bases GF.
+- O resgate de caixa usa `POST /api/rewards/tiers/:tierCode/claim` com `Idempotency-Key` e cria `game_deliveries` do tipo `REWARD_BOX`.
+- Ranks liberados podem ser resgatados em qualquer ordem; cada rank depende apenas da propria meta de AP no ciclo.
+- O ciclo fecha somente quando todos os ranks ativos do ciclo forem resgatados.
+- Ao fechar o ciclo, o backend preserva excedente com `carryOverAp = Math.max(accumulated_up - 30000, 0)`.
+- `box_game_item_id` em `reward_tiers` guarda o item_id da caixa unica entregue no item mall do jogo.
+- `game_item_id` em `reward_tier_items` continua interno para os itens visuais e nao aparece nas respostas publicas.
+- Com `GAME_DELIVERY_ENABLED=false`, o backend registra `game_deliveries`, mas nao escreve no banco GF.
+- Com `GAME_DELIVERY_ENABLED=true`, o backend processa `CREDIT_AP` em `gf_ms.tb_user` e `REWARD_BOX` em `gf_ls.item_receivable`.
 - Os nomes internos `up_amount`, `required_up_total` e `accumulated_up` continuam por compatibilidade de schema, mas a exibicao publica usa AP.
-- Nao ha gateway alternativo, entrega no GF, painel admin ou integracao com gf_ms/gf_ls/FFAccount/tb_user/pvalues nesta etapa.
+- Nao ha gateway alternativo, Banco Inter, painel admin ou integracao com FFAccount nesta etapa.
 
 ## Atualização de Conta Antiga
 
@@ -124,9 +128,18 @@ DATABASE_URL=
 NODE_ENV=development
 PORT=3333
 FRONTEND_URL=http://localhost:5173
+APP_PUBLIC_URL=http://localhost:5173
 SESSION_COOKIE_NAME=site_universe_session
 SESSION_TTL_DAYS=7
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=
+EMAIL_FROM="Site Universe <onboarding@resend.dev>"
 EMAIL_VERIFICATION_TOKEN_TTL_HOURS=24
+EMAIL_VERIFICATION_EXPIRES_MINUTES=30
+EMAIL_VERIFICATION_CODE_LENGTH=6
+EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS=60
+EMAIL_VERIFICATION_MAX_PER_HOUR=5
+EMAIL_REQUIRE_VERIFIED=true
 PASSWORD_RESET_TOKEN_TTL_MINUTES=30
 RATE_LIMIT_GLOBAL_MAX=100
 RATE_LIMIT_GLOBAL_WINDOW=1 minute
@@ -151,9 +164,56 @@ GF_DB_PASSWORD=
 GF_DB_NAME=gf_ms
 GF_ACCOUNT_DB_NAME=gf_ls
 GF_DB_SSL=false
+GAME_DELIVERY_ENABLED=false
 ```
 
 As variáveis do provider Pix ficam documentadas apenas em `backend/.env.example`, sem valores reais. Não coloque valores reais de segredo no repositório.
+
+### Resend em desenvolvimento
+
+Para testar envio real sem dominio verificado no Resend, use:
+
+```env
+EMAIL_PROVIDER=resend
+EMAIL_FROM="Site Universe <onboarding@resend.dev>"
+```
+
+Com `onboarding@resend.dev`, o Resend permite envio apenas para o e-mail associado a propria conta Resend. Enviar para outro destinatario pode retornar `403 Testing domain restriction`.
+
+Para producao, verifique um dominio proprio no Resend e troque `EMAIL_FROM` para um remetente desse dominio, por exemplo:
+
+```env
+EMAIL_FROM="Site Universe <noreply@seudominio.com>"
+```
+
+`RESEND_API_KEY` deve existir somente em `backend/.env`. Nao crie `VITE_RESEND_API_KEY`.
+
+## Entregas ao Grand Fantasia
+
+- `GF_DB_NAME=gf_ms` e usado para credito de AP em `tb_user.pvalues`, localizado por `tb_user.mid`.
+- `GF_ACCOUNT_DB_NAME=gf_ls` e usado para inserir caixas em `item_receivable`.
+- `GF_DB_SSL=false` e interpretado como boolean real; a string `"false"` nao ativa SSL.
+- `GAME_DELIVERY_ENABLED=false` mantem entregas como `pending` em `game_deliveries` e nao escreve no GF.
+- `GAME_DELIVERY_ENABLED=true` permite o processamento backend/worker das entregas no GF.
+- O worker/processador interno nunca recebe `account_name`, AP ou `item_id` do frontend.
+- AP vem do pedido aprovado no backend.
+- A conta GF vem de `game_accounts.game_login` vinculada ao usuario.
+- O item da caixa vem de `reward_tiers.box_game_item_id`.
+- Para preencher IDs das caixas, atualize `reward_tiers.box_game_item_id` no banco ou em uma seed/migration:
+  - `rank_1` / Escala Rank 1 = `TODO_ITEM_ID_RANK_1`
+  - `rank_2` / Escala Rank 2 = `TODO_ITEM_ID_RANK_2`
+  - `rank_3` / Escala Rank 3 = `TODO_ITEM_ID_RANK_3`
+  - `rank_4` / Escala Rank 4 = `TODO_ITEM_ID_RANK_4`
+  - `rank_5` / Escala Rank 5 = `TODO_ITEM_ID_RANK_5`
+  - `rank_6` / Escala Rank 6 = `TODO_ITEM_ID_RANK_6`
+- Enquanto `box_game_item_id` estiver vazio, o resgate retorna erro seguro: `Recompensa indisponivel no momento.`
+
+Para processar pendentes manualmente:
+
+```bash
+cd backend
+npm run game-deliveries:process
+```
 
 ## Teste local da migração GF
 
@@ -184,10 +244,12 @@ As variáveis do provider Pix ficam documentadas apenas em `backend/.env.example
 Frontend:
 
 - `/`
+- `/download`
 - `/login`
 - `/register`
 - `/verify-email`
 - `/verify-email?token=...`
+- `/verificar-email?token=...`
 - `/forgot-password`
 - `/reset-password?token=...`
 - `/atualizar-conta`
@@ -207,8 +269,9 @@ Backend Auth:
 - `POST /auth/logout`
 - `GET /auth/me`
 - `GET /auth/csrf`
-- `POST /auth/resend-verification`
+- `POST /auth/resend-verification-email`
 - `GET /auth/verify-email?token=...`
+- `POST /auth/verify-email-code`
 - `POST /auth/forgot-password`
 - `POST /auth/reset-password`
 
@@ -244,4 +307,5 @@ npm run build
 npx prisma validate
 npx prisma migrate status
 npm run prisma:generate
+npm run game-deliveries:process
 ```

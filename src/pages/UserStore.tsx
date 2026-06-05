@@ -27,7 +27,6 @@ type PendingOrderModalProps = {
 function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
   const { order, storePackage } = details
   const [copyMessage, setCopyMessage] = useState<string>()
-  const [isCheckingStatus, setIsCheckingStatus] = useState(false)
   const [isSimulatingPayment, setIsSimulatingPayment] = useState(false)
   const [simulationMessage, setSimulationMessage] = useState<string>()
   const [statusError, setStatusError] = useState<string>()
@@ -80,19 +79,6 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
     setStatusOrder(nextOrder)
 
     return nextOrder
-  }
-
-  async function handleRefreshStatus() {
-    setIsCheckingStatus(true)
-    setStatusError(undefined)
-
-    try {
-      await refreshOrderStatus()
-    } catch {
-      setStatusError('Não foi possível atualizar o status agora.')
-    } finally {
-      setIsCheckingStatus(false)
-    }
   }
 
   async function handleSimulateApprovedPayment() {
@@ -186,10 +172,6 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
               Copiar código Pix
             </Button>
           )}
-          <Button disabled={isCheckingStatus} onClick={handleRefreshStatus} variant="secondary">
-            <i className="bx bx-refresh text-xl" aria-hidden="true" />
-            {isCheckingStatus ? 'Atualizando...' : 'Já paguei / Atualizar status'}
-          </Button>
           {canSimulateApprovedPayment && (
             <Button
               disabled={isSimulatingPayment}

@@ -22,6 +22,7 @@ const friendlyMessagesByCode: Record<string, string> = {
   INTERNAL_SERVER_ERROR: 'Não foi possível concluir a ação. Tente novamente.',
   INVALID_CREDENTIALS: 'E-mail ou senha inválidos.',
   INVALID_OR_EXPIRED_TOKEN: 'Token inválido ou expirado.',
+  EMAIL_NOT_VERIFIED: 'Confirme seu e-mail antes de acessar sua conta.',
   LOGIN_BLOCKED_ACCOUNT_LOCKED: 'Muitas tentativas de login. Tente novamente mais tarde.',
   NOT_FOUND: 'Recurso não encontrado.',
   RATE_LIMITED: 'Muitas tentativas. Tente novamente em instantes.',

@@ -533,6 +533,68 @@ button {
   gap: 14px;
 }
 
+.download-page {
+  min-height: 100vh;
+  padding: 132px 20px 56px;
+  background:
+    linear-gradient(135deg, rgba(0, 0, 0, 0.82), rgba(8, 14, 52, 0.92)),
+    url('/images/1920x1080-hd-space-ab4lm018jxlopn1i.jpg') center / cover fixed;
+}
+
+.download-hero,
+.download-steps {
+  width: min(100%, 960px);
+  margin: 0 auto;
+}
+
+.download-hero h1 {
+  margin: 0;
+  font-family: 'Rubik Mono One', monospace;
+  font-size: clamp(2.2rem, 7vw, 5rem);
+  line-height: 1.08;
+}
+
+.download-hero p {
+  max-width: 780px;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.download-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 32px;
+}
+
+.download-step {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.72);
+  padding: 18px;
+}
+
+.download-step span {
+  color: #99f6e4;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.download-step p {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.76);
+  line-height: 1.6;
+}
+
 .legal-section {
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
@@ -959,6 +1021,25 @@ button {
   text-transform: uppercase;
 }
 
+.reward-youtube-note {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.reward-youtube-note a {
+  color: #a5f3fc;
+  font-weight: 900;
+  text-decoration: underline;
+  text-decoration-color: rgba(165, 243, 252, 0.7);
+  text-underline-offset: 4px;
+}
+
+.reward-youtube-note a:hover {
+  color: #fff;
+}
+
 .reward-item-slot {
   min-height: 116px;
   display: grid;
@@ -1176,27 +1257,12 @@ button {
 }
 
 .reward-detail-item {
-  min-height: 82px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  min-height: 0;
+  display: block;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
   padding: 12px;
-}
-
-.reward-detail-item-icon {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid rgba(153, 246, 228, 0.36);
-  border-radius: 8px;
-  background: rgba(153, 246, 228, 0.12);
-  color: #ccfbf1;
-  font-size: 1.3rem;
 }
 
 .reward-detail-item span {
@@ -1281,7 +1347,8 @@ button {
   }
 
   .store-grid,
-  .reward-grid {
+  .reward-grid,
+  .download-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1324,7 +1391,8 @@ button {
   }
 
   .store-grid,
-  .reward-grid {
+  .reward-grid,
+  .download-steps {
     grid-template-columns: 1fr;
   }
 
