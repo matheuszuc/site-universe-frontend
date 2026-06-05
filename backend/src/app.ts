@@ -5,11 +5,13 @@ import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 
 import { corsOptions } from "./config/cors.js";
-import { env } from "./config/env.js";
+import { env, isDevelopment } from "./config/env.js";
 import { accountMigrationRoutes } from "./modules/account-migration/account-migration.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
+import { devPaymentsRoutes } from "./modules/dev/dev-payments.routes.js";
 import { ordersRoutes } from "./modules/orders/orders.routes.js";
+import { mercadoPagoWebhookRoutes } from "./modules/payments/mercado-pago-webhook.routes.js";
 import { rewardsRoutes } from "./modules/rewards/rewards.routes.js";
 import { storeRoutes } from "./modules/store/store.routes.js";
 import { registerErrorHandler } from "./middlewares/error-handler.js";
@@ -66,6 +68,14 @@ export async function buildApp() {
   await app.register(ordersRoutes, {
     prefix: "/orders"
   });
+  await app.register(mercadoPagoWebhookRoutes, {
+    prefix: "/webhooks"
+  });
+  if (isDevelopment) {
+    await app.register(devPaymentsRoutes, {
+      prefix: "/dev/payments"
+    });
+  }
 
   return app;
 }

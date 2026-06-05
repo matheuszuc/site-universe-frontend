@@ -52,6 +52,43 @@ export type CreateOrderResponse = {
     currency: string
     createdAt: string
   }
+  pix: {
+    status: string | null
+    pixCopiaECola: string | null
+    qrCodeImage: string | null
+    expiresAt: string | null
+    unavailableReason: string | null
+  }
+}
+
+export type UserOrderSummary = {
+  id: string
+  orderNumber: string
+  packageCode: string
+  packageName: string
+  apAmount: number
+  priceCents: number
+  formattedPrice: string
+  currency: string
+  status: string
+  createdAt: string
+  paidAt: string | null
+  paymentProvider: string | null
+  paymentStatus: string | null
+}
+
+type ListOrdersResponse = {
+  orders: UserOrderSummary[]
+}
+
+type OrderStatusResponse = {
+  order: UserOrderSummary
+}
+
+type SimulateApprovedPaymentResponse = {
+  ok: true
+  orderStatus: 'paid'
+  message: string
 }
 
 function createIdempotencyKey(prefix: string) {
@@ -89,6 +126,29 @@ export function createPendingOrder(packageCode: string) {
     },
     headers: {
       'Idempotency-Key': createIdempotencyKey('order_create'),
+    },
+    method: 'POST',
+  })
+}
+
+export async function listCurrentUserOrders() {
+  const response = await apiRequest<ListOrdersResponse>('/orders')
+
+  return response.orders
+}
+
+export async function getCurrentUserOrderStatus(orderNumber: string) {
+  const response = await apiRequest<OrderStatusResponse>(
+    `/orders/${encodeURIComponent(orderNumber)}/status`,
+  )
+
+  return response.order
+}
+
+export function simulateApprovedPayment(orderNumber: string) {
+  return apiRequest<SimulateApprovedPaymentResponse>('/dev/payments/simulate-approved', {
+    body: {
+      orderNumber,
     },
     method: 'POST',
   })

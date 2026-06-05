@@ -8,6 +8,11 @@ const booleanStringSchema = z
   .optional()
   .transform((value) => value === "true");
 
+const optionalEmailStringSchema = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().email().optional()
+);
+
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -42,7 +47,15 @@ const envSchema = z.object({
   GF_DB_PASSWORD: z.string().optional(),
   GF_DB_NAME: z.string().min(1).default("gf_ms"),
   GF_ACCOUNT_DB_NAME: z.string().min(1).default("gf_ls"),
-  GF_DB_SSL: booleanStringSchema
+  GF_DB_SSL: booleanStringSchema,
+  MERCADO_PAGO_ACCESS_TOKEN: z.string().optional(),
+  MERCADO_PAGO_PUBLIC_KEY: z.string().optional(),
+  MERCADO_PAGO_WEBHOOK_SECRET: z.string().optional(),
+  MERCADO_PAGO_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
+  MERCADO_PAGO_TEST_PAYER_EMAIL: optionalEmailStringSchema,
+  PAYMENT_SUCCESS_URL: z.string().url().optional(),
+  PAYMENT_FAILURE_URL: z.string().url().optional(),
+  PAYMENT_PENDING_URL: z.string().url().optional()
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

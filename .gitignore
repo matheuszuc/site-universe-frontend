@@ -4,6 +4,11 @@ dist/
 .env
 .env.local
 *.log
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
 
 .DS_Store
 .vscode/

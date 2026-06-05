@@ -1,14 +1,17 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
 import { formatApAmount, formatCurrencyFromCents } from '../data/storePackages'
-import StorePackageCard from '../features/user-panel/components/StorePackageCard'
 import {
   createPendingOrder,
+  getCurrentUserOrderStatus,
   listStorePackages,
+  simulateApprovedPayment,
   type CreateOrderResponse,
   type StorePackage,
+  type UserOrderSummary,
 } from '../features/store/services/storeApi'
+import StorePackageCard from '../features/user-panel/components/StorePackageCard'
 import AuthenticatedLayout from '../layouts/AuthenticatedLayout'
 
 type CreatedOrderDetails = {
@@ -23,8 +26,27 @@ type PendingOrderModalProps = {
 
 function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
   const { order, storePackage } = details
+  const [copyMessage, setCopyMessage] = useState<string>()
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false)
+  const [isSimulatingPayment, setIsSimulatingPayment] = useState(false)
+  const [simulationMessage, setSimulationMessage] = useState<string>()
+  const [statusError, setStatusError] = useState<string>()
+  const [statusOrder, setStatusOrder] = useState<UserOrderSummary>()
   const apAmount = order.order.rewardAmount || storePackage.apAmount
   const amount = formatCurrencyFromCents(order.order.amountCents, order.order.currency)
+  const currentStatus = statusOrder?.status ?? order.order.status
+  const isPaid = currentStatus === 'paid' || currentStatus === 'fulfilled'
+  const statusLabel = isPaid ? 'Pago' : 'Aguardando pagamento Pix'
+  const pixUnavailable = order.pix.unavailableReason && !order.pix.pixCopiaECola && !order.pix.qrCodeImage
+  const canSimulateApprovedPayment = import.meta.env.DEV && !isPaid
+
+  const pixDescription = useMemo(() => {
+    if (isPaid) {
+      return 'Pagamento confirmado. O saldo AP será atualizado pelo servidor.'
+    }
+
+    return 'O AP será creditado somente após confirmação real do pagamento Pix.'
+  }, [isPaid])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -41,6 +63,58 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
   function handleBackdropClick(event: MouseEvent<HTMLDivElement>) {
     if (event.target === event.currentTarget) {
       onClose()
+    }
+  }
+
+  async function handleCopyPixCode() {
+    if (!order.pix.pixCopiaECola) {
+      return
+    }
+
+    await navigator.clipboard.writeText(order.pix.pixCopiaECola)
+    setCopyMessage('Código Pix copiado.')
+  }
+
+  async function refreshOrderStatus() {
+    const nextOrder = await getCurrentUserOrderStatus(order.order.orderNumber)
+    setStatusOrder(nextOrder)
+
+    return nextOrder
+  }
+
+  async function handleRefreshStatus() {
+    setIsCheckingStatus(true)
+    setStatusError(undefined)
+
+    try {
+      await refreshOrderStatus()
+    } catch {
+      setStatusError('Não foi possível atualizar o status agora.')
+    } finally {
+      setIsCheckingStatus(false)
+    }
+  }
+
+  async function handleSimulateApprovedPayment() {
+    setIsSimulatingPayment(true)
+    setSimulationMessage(undefined)
+    setStatusError(undefined)
+
+    try {
+      const result = await simulateApprovedPayment(order.order.orderNumber)
+      await refreshOrderStatus()
+      window.dispatchEvent(
+        new CustomEvent('site-universe:payment-updated', {
+          detail: {
+            orderNumber: order.order.orderNumber,
+          },
+        }),
+      )
+      setSimulationMessage(result.message)
+    } catch {
+      setStatusError('Nao foi possivel simular o pagamento agora.')
+    } finally {
+      setIsSimulatingPayment(false)
     }
   }
 
@@ -62,10 +136,8 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
         </button>
 
         <p className="panel-card-kicker">Pedido criado</p>
-        <h2 id="pending-order-modal-title">Aguardando pagamento</h2>
-        <p>
-          Pedido {order.order.orderNumber} criado com sucesso. O AP ainda não foi creditado.
-        </p>
+        <h2 id="pending-order-modal-title">{statusLabel}</h2>
+        <p>Pedido {order.order.orderNumber} criado com sucesso.</p>
 
         <div className="store-order-summary" aria-label="Resumo do pedido pendente">
           <div>
@@ -82,16 +154,52 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
           </div>
           <div>
             <span>Status</span>
-            <strong>Aguardando pagamento</strong>
+            <strong>{statusLabel}</strong>
           </div>
         </div>
 
+        {order.pix.qrCodeImage && (
+          <div className="store-pix-qr">
+            <img alt="QR Code Pix do pedido" src={order.pix.qrCodeImage} />
+          </div>
+        )}
+
+        {order.pix.pixCopiaECola && (
+          <div className="store-pix-copy">
+            <span>Pix copia e cola</span>
+            <textarea readOnly value={order.pix.pixCopiaECola} />
+          </div>
+        )}
+
         <div className="store-order-warning">
-          A integração de pagamento ainda não está ativa. Nenhum AP será creditado até essa etapa
-          ficar disponível.
+          {pixUnavailable ? order.pix.unavailableReason : pixDescription}
         </div>
 
+        {copyMessage && <div className="store-order-status-note">{copyMessage}</div>}
+        {simulationMessage && <div className="store-order-status-note">{simulationMessage}</div>}
+        {statusError && <div className="store-order-status-note store-order-status-error">{statusError}</div>}
+
         <div className="store-order-actions">
+          {order.pix.pixCopiaECola && (
+            <Button onClick={handleCopyPixCode} variant="secondary">
+              <i className="bx bx-copy text-xl" aria-hidden="true" />
+              Copiar código Pix
+            </Button>
+          )}
+          <Button disabled={isCheckingStatus} onClick={handleRefreshStatus} variant="secondary">
+            <i className="bx bx-refresh text-xl" aria-hidden="true" />
+            {isCheckingStatus ? 'Atualizando...' : 'Já paguei / Atualizar status'}
+          </Button>
+          {canSimulateApprovedPayment && (
+            <Button
+              disabled={isSimulatingPayment}
+              onClick={handleSimulateApprovedPayment}
+              variant="secondary"
+            >
+              <i className="bx bx-check-circle text-xl" aria-hidden="true" />
+              {isSimulatingPayment ? 'Simulando...' : 'Simular pagamento aprovado'}
+            </Button>
+          )}
           <Button onClick={onClose} variant="primary">
             Entendi
           </Button>
@@ -135,7 +243,7 @@ export default function UserStore() {
       const order = await createPendingOrder(storePackage.code)
       setCreatedOrderDetails({ order, storePackage })
     } catch {
-      setErrorMessage('Não foi possível criar o pedido. Tente novamente.')
+      setErrorMessage('Não foi possível criar o pedido Pix. Tente novamente.')
     } finally {
       setCreatingPackageCode(undefined)
     }
@@ -148,8 +256,8 @@ export default function UserStore() {
           <p className="panel-hero-kicker">Loja de AP</p>
           <h1>Pacotes para evoluir</h1>
           <p>
-            Escolha um pacote de AP. O pedido é criado com segurança e fica pendente até a
-            integração de pagamento ser ativada.
+            Escolha um pacote de AP. O pedido é criado com segurança e o pagamento é feito somente
+            via Pix.
           </p>
         </section>
 

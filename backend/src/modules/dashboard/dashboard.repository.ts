@@ -44,6 +44,54 @@ export class DashboardRepository {
       }
     });
   }
+
+  getUserApSummary(userId: string) {
+    return prisma.$transaction(async (tx) => {
+      const [walletBalance, activeCycle, paidOrders] = await Promise.all([
+        tx.walletTransaction.aggregate({
+          where: {
+            userId,
+            currencyType: "AP",
+            status: "posted"
+          },
+          _sum: {
+            amount: true
+          }
+        }),
+        tx.userRewardCycle.findFirst({
+          where: {
+            userId,
+            status: "active"
+          },
+          orderBy: {
+            cycleNumber: "desc"
+          },
+          select: {
+            accumulatedUp: true,
+            cycleNumber: true
+          }
+        }),
+        tx.order.aggregate({
+          where: {
+            userId,
+            status: {
+              in: ["paid", "fulfilled"]
+            }
+          },
+          _count: {
+            _all: true
+          }
+        })
+      ]);
+
+      return {
+        availableAp: walletBalance._sum.amount ?? 0,
+        cycleAccumulatedAp: activeCycle?.accumulatedUp ?? 0,
+        currentCycleNumber: activeCycle?.cycleNumber ?? null,
+        paidOrdersCount: paidOrders._count._all
+      };
+    });
+  }
 }
 
 export const dashboardRepository = new DashboardRepository();

@@ -15,7 +15,7 @@ Este módulo cobre:
 - Painel do usuário protegido por sessão real
 - Atualização segura de contas antigas, com sessão temporária httpOnly
 
-Não inclui gateway real de pagamento, Mercado Pago, Stripe, entrega no jogo, carrinho, painel admin, OAuth, 2FA/MFA ou provedor real de e-mail.
+Não inclui gateway de pagamento em produção, Stripe, entrega no jogo, carrinho, painel admin, OAuth, 2FA/MFA ou provedor real de e-mail.
 
 ## Loja de AP e Escala
 
@@ -24,8 +24,14 @@ Não inclui gateway real de pagamento, Mercado Pago, Stripe, entrega no jogo, ca
 - A tela da loja carrega pacotes por `GET /api/store/packages`.
 - `POST /orders` cria pedido `pending_payment` e pagamento `pending`; nao aprova pagamento.
 - A criacao de pedido envia apenas `packageCode` e `Idempotency-Key`.
-- Ainda nao ha endpoint publico de historico/listagem de pedidos; a tela nao exibe secao de pedidos anteriores.
-- A aprovacao de pagamento fica somente na funcao interna `approvePaymentFromVerifiedWebhook`, preparada para webhook validado futuro.
+- `GET /orders` lista somente os últimos pedidos do usuário logado, sem aceitar `userId` do frontend.
+- A tela de Histórico/Atividades mostra pedidos reais de AP e estado vazio quando não houver pedidos.
+- O painel mostra saldo AP a partir de `/users/me/dashboard`.
+- O Mercado Pago Pix fica habilitado somente em modo sandbox quando as variáveis do provider estiverem configuradas no backend.
+- Se a cobranca Pix for criada via Mercado Pago Orders API, `POST /orders` retorna apenas dados publicos do Pix, como `pix.pixCopiaECola`, `pix.qrCodeImage`, `pix.status`, `order.orderNumber` e `pix.expiresAt`; caso contrario, o pedido fica pendente e a UI mostra pagamento Pix indisponivel.
+- `GET /orders/:orderNumber/status` permite ao usuário atualizar o status do próprio pedido; a confirmação continua sendo server-to-server no backend.
+- O webhook público `POST /webhooks/mercado-pago` valida a assinatura recebida, consulta o pagamento server-to-server e só então chama `approvePaymentFromVerifiedWebhook`.
+- A aprovacao de pagamento fica somente na funcao interna `approvePaymentFromVerifiedWebhook`, após validação real do provider.
 - Compras aprovadas no Site Universe somam AP ao ciclo ativo da escala por `user_reward_cycle_progress_events`.
 - O AP acumulado da escala e separado do AP dentro do jogo.
 - A tela da escala carrega progresso, status dos ranks e itens das caixas por `GET /api/rewards/scale`.
@@ -36,7 +42,7 @@ Não inclui gateway real de pagamento, Mercado Pago, Stripe, entrega no jogo, ca
 - `game_item_id` e interno em `reward_tier_items` e nao aparece nas respostas publicas.
 - A entrega real no GF fica para etapa futura via um servico de integracao de jogo; esta etapa nao chama `age_insertitem` nem acessa bases GF.
 - Os nomes internos `up_amount`, `required_up_total` e `accumulated_up` continuam por compatibilidade de schema, mas a exibicao publica usa AP.
-- Nao ha gateway real, Mercado Pago, Stripe, entrega no GF, painel admin ou integracao com gf_ms/gf_ls/FFAccount/tb_user/pvalues nesta etapa.
+- Nao ha gateway alternativo, entrega no GF, painel admin ou integracao com gf_ms/gf_ls/FFAccount/tb_user/pvalues nesta etapa.
 
 ## Atualização de Conta Antiga
 
@@ -147,7 +153,7 @@ GF_ACCOUNT_DB_NAME=gf_ls
 GF_DB_SSL=false
 ```
 
-Não coloque valores reais de segredo no repositório.
+As variáveis do provider Pix ficam documentadas apenas em `backend/.env.example`, sem valores reais. Não coloque valores reais de segredo no repositório.
 
 ## Teste local da migração GF
 
@@ -211,8 +217,10 @@ Backend Loja e Recompensas:
 - `GET /api/store/packages`
 - `GET /api/rewards/scale`
 - `POST /api/rewards/tiers/:tierCode/claim`
+- `GET /orders`
+- `GET /orders/:orderNumber/status`
 - `POST /orders`
-- Historico de pedidos: pendente, sem `GET /orders` publico.
+- `POST /webhooks/mercado-pago`
 
 Backend Atualização de Conta Antiga:
 

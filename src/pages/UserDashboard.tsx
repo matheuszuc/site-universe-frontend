@@ -69,6 +69,39 @@ export default function UserDashboard() {
     }
   }, [navigate, setUser])
 
+  useEffect(() => {
+    let isMounted = true
+
+    async function refreshDashboardAfterPayment() {
+      try {
+        const data = await getUserPanelData()
+
+        if (!isMounted) {
+          return
+        }
+
+        setPanelData(data)
+        setUser({
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+          status: data.user.status,
+          emailVerified: data.user.emailVerified,
+        })
+      } catch {
+        // The next explicit dashboard load will show any persistent backend error.
+      }
+    }
+
+    window.addEventListener('site-universe:payment-updated', refreshDashboardAfterPayment)
+
+    return () => {
+      isMounted = false
+      window.removeEventListener('site-universe:payment-updated', refreshDashboardAfterPayment)
+    }
+  }, [setUser])
+
   return (
     <AuthenticatedLayout>
       <main className="panel-main">
@@ -97,11 +130,11 @@ export default function UserDashboard() {
           <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
             <div className="grid gap-4 md:grid-cols-2">
               <AccountSummaryCard account={panelData.account} user={panelData.user} />
-              <BalanceCard />
+              <BalanceCard balances={panelData.balances} />
               <div className="md:col-span-2">
                 <EmailVerificationCard user={panelData.user} />
               </div>
-              <ActivityHistory activities={panelData.activities} />
+              <ActivityHistory activities={panelData.activities} orders={panelData.orders} />
             </div>
             <QuickActions />
           </section>

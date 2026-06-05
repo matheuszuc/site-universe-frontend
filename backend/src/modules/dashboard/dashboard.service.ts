@@ -1,6 +1,7 @@
 import { sessionCookieName } from "../../config/cookies.js";
 import { AppError } from "../../utils/safe-error.js";
 import { authCookieSchema } from "../auth/auth.schemas.js";
+import { mercadoPagoPixService } from "../payments/providers/mercado-pago-pix.service.js";
 import { securityEventsService } from "../security/security-events.service.js";
 import { sessionsService } from "../sessions/sessions.service.js";
 import { dashboardRepository, type SafeActivityType } from "./dashboard.repository.js";
@@ -122,6 +123,7 @@ export class DashboardService {
           createdAt: event.createdAt
         }))
       : buildFallbackActivity(user);
+    const apSummary = await dashboardRepository.getUserApSummary(session.user.id);
 
     return {
       user: toDashboardUser(user),
@@ -134,8 +136,9 @@ export class DashboardService {
         shopEnabled: true,
         rewardsEnabled: true,
         gameIntegrationEnabled: false,
-        paymentsEnabled: false
+        paymentsEnabled: mercadoPagoPixService.isEnabled()
       },
+      balances: apSummary,
       activity
     };
   }

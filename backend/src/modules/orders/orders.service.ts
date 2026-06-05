@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 
 import { Prisma } from "@prisma/client";
+import { z } from "zod";
 
 import { sessionCookieName } from "../../config/cookies.js";
 import { prisma } from "../../database/prisma.js";
@@ -14,6 +15,7 @@ import {
   idempotencyKeySchema
 } from "../idempotency/idempotency.utils.js";
 import { recordPaymentAudit, type AuditRequestInfo } from "../payments/audit.service.js";
+import { mercadoPagoPixService } from "../payments/providers/mercado-pago-pix.service.js";
 import { userRewardCycleService } from "../rewards/reward-cycle.service.js";
 import { storePackageService } from "../store/store.service.js";
 import { createOrderSchema, type CreateOrderInput } from "./orders.schemas.js";
@@ -36,6 +38,9 @@ type ApprovePaymentInput = {
 const orderCreateScope = "order_create";
 const futurePaymentProvider = "future_webhook_provider";
 const approvablePaymentStatuses = new Set(["pending", "processing"]);
+const simulateApprovedPaymentSchema = z.object({
+  orderNumber: z.string().trim().min(1).max(64)
+});
 
 function buildOrderNumber(now = new Date()) {
   const date = now.toISOString().slice(0, 10).replaceAll("-", "");
@@ -46,6 +51,13 @@ function buildOrderNumber(now = new Date()) {
 
 function toIsoDate(value: Date | null) {
   return value ? value.toISOString() : null;
+}
+
+function formatCurrencyFromCents(amountCents: number, currency = "BRL") {
+  return new Intl.NumberFormat("pt-BR", {
+    currency,
+    style: "currency"
+  }).format(amountCents / 100);
 }
 
 function getPackageCode(input: CreateOrderInput) {
@@ -73,6 +85,13 @@ function buildCreateOrderResponse(
     amountCents: number;
     currency: string;
     createdAt: Date;
+  },
+  pix?: {
+    status?: string | null;
+    pixCopiaECola?: string | null;
+    qrCodeImage?: string | null;
+    expiresAt?: Date | null;
+    unavailableReason?: string | null;
   }
 ) {
   return {
@@ -96,7 +115,47 @@ function buildCreateOrderResponse(
       amountCents: payment.amountCents,
       currency: payment.currency,
       createdAt: payment.createdAt.toISOString()
+    },
+    pix: {
+      status: pix?.status ?? payment.status,
+      pixCopiaECola: pix?.pixCopiaECola ?? null,
+      qrCodeImage: pix?.qrCodeImage ?? null,
+      expiresAt: toIsoDate(pix?.expiresAt ?? order.expiresAt),
+      unavailableReason: pix?.unavailableReason ?? null
     }
+  };
+}
+
+function buildOrderSummary(order: {
+  id: string;
+  orderNumber: string;
+  status: string;
+  packageCode: string;
+  packageName: string;
+  amountCents: number;
+  currency: string;
+  rewardAmount: number;
+  createdAt: Date;
+  paidAt: Date | null;
+  payment: {
+    status: string;
+    provider: string;
+  } | null;
+}) {
+  return {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    packageCode: order.packageCode,
+    packageName: order.packageName,
+    apAmount: order.rewardAmount,
+    priceCents: order.amountCents,
+    formattedPrice: formatCurrencyFromCents(order.amountCents, order.currency),
+    currency: order.currency,
+    status: order.status,
+    createdAt: order.createdAt.toISOString(),
+    paidAt: toIsoDate(order.paidAt),
+    paymentProvider: order.payment?.provider ?? null,
+    paymentStatus: order.payment?.status ?? null
   };
 }
 
@@ -107,6 +166,12 @@ function isCreateOrderResponse(value: unknown): value is ReturnType<typeof build
 type CreateOrderResult = {
   statusCode: number;
   body: ReturnType<typeof buildCreateOrderResponse>;
+};
+
+type SimulateApprovedPaymentResult = {
+  ok: true;
+  orderStatus: "paid";
+  message: string;
 };
 
 function isUniqueConstraintError(error: unknown) {
@@ -246,7 +311,9 @@ export class OrdersService {
             orderId: order.id,
             userId: user.id,
             status: "pending",
-            provider: futurePaymentProvider,
+            provider: mercadoPagoPixService.isEnabled()
+              ? mercadoPagoPixService.provider
+              : futurePaymentProvider,
             amountCents: storePackage.priceCents,
             currency: storePackage.currency
           }
@@ -259,7 +326,55 @@ export class OrdersService {
             paymentId: payment.id
           }
         });
-        const responseBody = buildCreateOrderResponse(orderWithPayment, payment);
+        const pixPayment = await mercadoPagoPixService.createPixPayment({
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          amountCents: storePackage.priceCents,
+          currency: storePackage.currency,
+          payerEmail: user.email,
+          expiresAt: order.expiresAt,
+          idempotencyKey
+        });
+        const paymentWithProvider = pixPayment
+          ? await tx.payment.update({
+              where: {
+                id: payment.id
+              },
+              data: {
+                provider: mercadoPagoPixService.provider,
+                providerPaymentId: pixPayment.providerPaymentId,
+                providerEventId: pixPayment.providerTransactionId,
+                rawProviderStatus: pixPayment.status,
+                providerPayloadHash: hashRequest({
+                  providerPaymentId: pixPayment.providerPaymentId,
+                  status: pixPayment.status,
+                  statusDetail: pixPayment.statusDetail
+                })
+              }
+            })
+          : payment;
+        const orderForResponse = pixPayment
+          ? await tx.order.update({
+              where: {
+                id: orderWithPayment.id
+              },
+              data: {
+                metadata: {
+                  source: "frontend_order_create",
+                  pixProvider: mercadoPagoPixService.provider,
+                  pixProviderPaymentId: pixPayment.providerPaymentId,
+                  pixExpiresAt: toIsoDate(pixPayment.expiresAt)
+                }
+              }
+            })
+          : orderWithPayment;
+        const responseBody = buildCreateOrderResponse(orderForResponse, paymentWithProvider, {
+          status: "pending",
+          pixCopiaECola: pixPayment?.pixCopiaECola ?? null,
+          qrCodeImage: pixPayment?.qrCodeImage ?? null,
+          expiresAt: pixPayment?.expiresAt ?? order.expiresAt,
+          unavailableReason: pixPayment ? null : "Pagamento Pix indisponível no momento."
+        });
 
         await tx.paymentAuditLog.createMany({
           data: [
@@ -296,7 +411,9 @@ export class OrdersService {
               userAgent: requestInfo.userAgent ?? null,
               success: true,
               metadata: {
-                provider: futurePaymentProvider,
+                provider: paymentWithProvider.provider,
+                pixPaymentCreated: Boolean(pixPayment),
+                providerPaymentId: pixPayment?.providerPaymentId ?? null,
                 amountCents: payment.amountCents,
                 currency: payment.currency
               }
@@ -546,6 +663,206 @@ export class OrdersService {
         progressAdded: progressResult.created
       };
     });
+  }
+
+  async simulateApprovedPaymentForCurrentUser(
+    input: unknown,
+    cookies: Record<string, string | undefined>,
+    requestInfo: RequestInfo = {}
+  ): Promise<SimulateApprovedPaymentResult> {
+    const parsedInput = simulateApprovedPaymentSchema.parse(input);
+    const user = await authService.getCurrentUser(cookies[sessionCookieName], requestInfo);
+    const order = await prisma.order.findFirst({
+      where: {
+        orderNumber: parsedInput.orderNumber,
+        userId: user.id
+      },
+      include: {
+        payment: true
+      }
+    });
+
+    if (!order) {
+      throw new AppError(404, "NOT_FOUND", "Pedido nao encontrado.");
+    }
+
+    if (!order.payment) {
+      throw new AppError(409, "CONFLICT", "Pedido sem pagamento para simular.");
+    }
+
+    if (
+      order.status !== "pending_payment" &&
+      !(order.status === "paid" && order.payment.status === "approved")
+    ) {
+      throw new AppError(409, "CONFLICT", "Pedido nao pode ser simulado nesse status.");
+    }
+
+    if (
+      order.status === "pending_payment" &&
+      !approvablePaymentStatuses.has(order.payment.status)
+    ) {
+      throw new AppError(409, "CONFLICT", "Pagamento nao pode ser simulado nesse status.");
+    }
+
+    const providerEventId = `dev_simulated_payment:${order.orderNumber}`;
+    const providerPayload = {
+      source: "dev_payment_simulator",
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      paymentId: order.payment.id,
+      amountCents: order.amountCents,
+      currency: order.currency,
+      rewardAmount: order.rewardAmount
+    };
+    const approval = await this.approvePaymentFromVerifiedWebhook({
+      paymentId: order.payment.id,
+      providerEventId,
+      rawProviderStatus: "processed",
+      providerPayloadHash: hashRequest(providerPayload),
+      requestId: requestInfo.requestId,
+      metadata: {
+        ...providerPayload,
+        simulatedByUserId: user.id,
+        developmentOnly: true
+      }
+    });
+
+    return {
+      ok: true,
+      orderStatus: "paid",
+      message: approval.alreadyApproved
+        ? "Pedido ja processado."
+        : "Pagamento simulado com sucesso em ambiente de desenvolvimento."
+    };
+  }
+
+  async listCurrentUserOrders(
+    cookies: Record<string, string | undefined>,
+    requestInfo: RequestInfo = {}
+  ) {
+    const user = await authService.getCurrentUser(cookies[sessionCookieName], requestInfo);
+    const orders = await prisma.order.findMany({
+      where: {
+        userId: user.id
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: 20,
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        packageCode: true,
+        packageName: true,
+        amountCents: true,
+        currency: true,
+        rewardAmount: true,
+        createdAt: true,
+        paidAt: true,
+        payment: {
+          select: {
+            status: true,
+            provider: true
+          }
+        }
+      }
+    });
+
+    return {
+      orders: orders.map(buildOrderSummary)
+    };
+  }
+
+  async getCurrentUserOrderStatus(
+    orderNumber: string,
+    cookies: Record<string, string | undefined>,
+    requestInfo: RequestInfo = {}
+  ) {
+    const user = await authService.getCurrentUser(cookies[sessionCookieName], requestInfo);
+    const order = await prisma.order.findFirst({
+      where: {
+        orderNumber,
+        userId: user.id
+      },
+      include: {
+        payment: true
+      }
+    });
+
+    if (!order) {
+      throw new AppError(404, "NOT_FOUND", "Pedido não encontrado.");
+    }
+
+    if (
+      order.status === "pending_payment" &&
+      order.payment?.provider === mercadoPagoPixService.provider &&
+      order.payment.providerPaymentId &&
+      mercadoPagoPixService.isEnabled()
+    ) {
+      const providerPayment = await mercadoPagoPixService.getProviderOrder(order.payment.providerPaymentId);
+
+      if (
+        providerPayment.status === "processed" &&
+        (!providerPayment.statusDetail || providerPayment.statusDetail === "accredited") &&
+        providerPayment.amountCents === order.amountCents &&
+        providerPayment.currency === order.currency
+      ) {
+        await this.approvePaymentFromVerifiedWebhook({
+          paymentId: order.payment.id,
+          providerPaymentId: providerPayment.providerPaymentId,
+          providerEventId: `status_poll:${providerPayment.providerPaymentId}`,
+          rawProviderStatus: providerPayment.status,
+          providerPayloadHash: hashRequest(providerPayment),
+          requestId: requestInfo.requestId,
+          metadata: {
+            provider: mercadoPagoPixService.provider,
+            source: "user_status_poll",
+            providerPaymentId: providerPayment.providerPaymentId,
+            statusDetail: providerPayment.statusDetail
+          }
+        });
+      } else {
+        await prisma.payment.update({
+          where: {
+          id: order.payment.id
+        },
+        data: {
+            rawProviderStatus: providerPayment.status,
+            providerPayloadHash: hashRequest(providerPayment)
+        }
+      });
+      }
+    }
+
+    const refreshedOrder = await prisma.order.findFirstOrThrow({
+      where: {
+        orderNumber,
+        userId: user.id
+      },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        packageCode: true,
+        packageName: true,
+        amountCents: true,
+        currency: true,
+        rewardAmount: true,
+        createdAt: true,
+        paidAt: true,
+        payment: {
+          select: {
+            status: true,
+            provider: true
+          }
+        }
+      }
+    });
+
+    return {
+      order: buildOrderSummary(refreshedOrder)
+    };
   }
 }
 

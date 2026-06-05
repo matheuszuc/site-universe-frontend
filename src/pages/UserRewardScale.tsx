@@ -46,6 +46,18 @@ export default function UserRewardScale() {
     loadScale()
   }, [])
 
+  useEffect(() => {
+    function refreshScaleAfterPayment() {
+      void loadScale()
+    }
+
+    window.addEventListener('site-universe:payment-updated', refreshScaleAfterPayment)
+
+    return () => {
+      window.removeEventListener('site-universe:payment-updated', refreshScaleAfterPayment)
+    }
+  }, [])
+
   async function handleClaim(tier: RewardTier) {
     setErrorMessage(undefined)
     setSuccessMessage(undefined)
