@@ -339,7 +339,7 @@ export class UserRewardCycleService {
               requiredUpTotal: tier.requiredUpTotal
             }
           });
-          throw new AppError(409, "CONFLICT", "AP acumulado insuficiente para este rank.");
+          throw new AppError(409, "CONFLICT", "Progresso insuficiente para este rank.");
         }
 
         if (!tier.boxGameItemId) {
@@ -397,9 +397,27 @@ export class UserRewardCycleService {
             idempotencyKey: input.idempotencyKey
           }
         });
+        const rewardDelivery = await tx.rewardDelivery.create({
+          data: {
+            userId: input.userId,
+            status: "pending",
+            rewardType: "REWARD_BOX",
+            rewardAmount: 1,
+            idempotencyKey: `reward_box_delivery:${claim.id}`
+          }
+        });
+        let claimWithDelivery = await tx.userRewardTierClaim.update({
+          where: {
+            id: claim.id
+          },
+          data: {
+            rewardDeliveryId: rewardDelivery.id
+          }
+        });
         const gameDelivery = await gameDeliveryService.createRewardBoxDeliveryTx(tx, {
           userId: input.userId,
           userRewardCycleId: cycle.id,
+          rewardDeliveryId: rewardDelivery.id,
           rewardTierClaimId: claim.id,
           rewardTierCode: tier.code,
           itemId: tier.boxGameItemId,
@@ -407,12 +425,22 @@ export class UserRewardCycleService {
         });
 
         if (gameDelivery.status === "failed") {
-          await tx.userRewardTierClaim.update({
+          claimWithDelivery = await tx.userRewardTierClaim.update({
             where: {
               id: claim.id
             },
             data: {
               deliveryStatus: "failed"
+            }
+          });
+          await tx.rewardDelivery.update({
+            where: {
+              id: rewardDelivery.id
+            },
+            data: {
+              status: "failed",
+              failedAt: now,
+              lastError: gameDelivery.lastError
             }
           });
         }
@@ -510,9 +538,9 @@ export class UserRewardCycleService {
         const responseBody = {
           claim: {
             id: claim.id,
-            status: claim.status,
-            deliveryStatus: claim.deliveryStatus,
-            claimedAt: claim.claimedAt?.toISOString() ?? null
+            status: claimWithDelivery.status,
+            deliveryStatus: claimWithDelivery.deliveryStatus,
+            claimedAt: claimWithDelivery.claimedAt?.toISOString() ?? null
           },
           tier: toPublicTier(tier),
           cycle: {
@@ -523,7 +551,8 @@ export class UserRewardCycleService {
           gameDelivery: {
             id: gameDelivery.id,
             type: gameDelivery.type,
-            status: gameDelivery.status
+            status: gameDelivery.status,
+            rewardDeliveryId: gameDelivery.rewardDeliveryId
           },
           nextCycle
         };
@@ -540,7 +569,9 @@ export class UserRewardCycleService {
           success: true,
           metadata: {
             claimId: claim.id,
-            cycleId: cycle.id
+            cycleId: cycle.id,
+            gameDeliveryId: gameDelivery.id,
+            rewardDeliveryId: rewardDelivery.id
           }
         });
         await tx.idempotencyKey.update({

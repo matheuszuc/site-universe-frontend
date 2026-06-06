@@ -237,9 +237,9 @@ model WalletTransaction {
 model RewardDelivery {
   id                  String    @id @default(uuid()) @db.Uuid
   userId              String    @map("user_id") @db.Uuid
-  orderId             String    @map("order_id") @db.Uuid
-  paymentId           String    @unique @map("payment_id") @db.Uuid
-  walletTransactionId String    @unique @map("wallet_transaction_id") @db.Uuid
+  orderId             String?   @map("order_id") @db.Uuid
+  paymentId           String?   @unique @map("payment_id") @db.Uuid
+  walletTransactionId String?   @unique @map("wallet_transaction_id") @db.Uuid
   status              String
   rewardType          String    @map("reward_type")
   rewardAmount        Int       @map("reward_amount")
@@ -260,16 +260,15 @@ model RewardDelivery {
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
   user              User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
-  order             Order                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  payment           Payment               @relation(fields: [paymentId], references: [id], onDelete: Restrict)
-  walletTransaction WalletTransaction     @relation("RewardDeliveryWalletTransaction", fields: [walletTransactionId], references: [id], onDelete: Restrict)
+  order             Order?                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  payment           Payment?              @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  walletTransaction WalletTransaction?    @relation("RewardDeliveryWalletTransaction", fields: [walletTransactionId], references: [id], onDelete: Restrict)
   walletSource      WalletTransaction[]   @relation("WalletRewardDelivery")
   paymentAuditLogs  PaymentAuditLog[]
   tierClaims        UserRewardTierClaim[]
   gameDeliveries    GameDelivery[]
 
   @@index([userId, createdAt(sort: Desc)])
-  @@index([status, nextRetryAt])
   @@map("reward_deliveries")
 }
 
@@ -360,7 +359,7 @@ model GameDelivery {
   orderId          String?   @map("order_id") @db.Uuid
   paymentId        String?   @map("payment_id") @db.Uuid
   rewardDeliveryId String?   @map("reward_delivery_id") @db.Uuid
-  rewardTierClaimId String?  @unique @map("reward_tier_claim_id") @db.Uuid
+  rewardTierClaimId String?  @map("reward_tier_claim_id") @db.Uuid
   rewardTierCode   String?   @map("reward_tier_code")
   gfAccountName    String?   @map("gf_account_name")
   apAmount         Int?      @map("ap_amount")
@@ -475,7 +474,7 @@ model UserRewardTierClaim {
   userRewardCycle   UserRewardCycle  @relation(fields: [userRewardCycleId], references: [id], onDelete: Restrict)
   rewardTier        RewardTier       @relation(fields: [rewardTierId], references: [id], onDelete: Restrict)
   rewardDelivery    RewardDelivery?  @relation(fields: [rewardDeliveryId], references: [id], onDelete: Restrict)
-  gameDelivery      GameDelivery?
+  gameDeliveries    GameDelivery[]
 
   @@unique([userRewardCycleId, rewardTierId])
   @@index([userId, createdAt(sort: Desc)])
@@ -490,7 +489,7 @@ model GameAccount {
   id                         String    @id @default(uuid()) @db.Uuid
   userId                     String    @map("user_id") @db.Uuid
   gameLogin                  String    @unique @map("game_login")
-  gameAccountId              String?   @unique @map("game_account_id")
+  gameAccountId              String?   @map("game_account_id")
   status                     String
   linkedAt                   DateTime? @map("linked_at")
   verifiedAt                 DateTime? @map("verified_at")

@@ -20,6 +20,7 @@ type CreateCreditApDeliveryInput = {
 type CreateRewardBoxDeliveryInput = {
   userId: string;
   userRewardCycleId: string;
+  rewardDeliveryId: string;
   rewardTierClaimId: string;
   rewardTierCode: string;
   itemId: number;
@@ -133,6 +134,7 @@ export class GameDeliveryService {
         type: "REWARD_BOX",
         status: gfAccountName ? "pending" : "failed",
         idempotencyKey,
+        rewardDeliveryId: input.rewardDeliveryId,
         rewardTierClaimId: input.rewardTierClaimId,
         rewardTierCode: input.rewardTierCode,
         gfAccountName,
@@ -156,6 +158,7 @@ export class GameDeliveryService {
       metadata: {
         type: "REWARD_BOX",
         status: delivery.status,
+        rewardDeliveryId: input.rewardDeliveryId,
         rewardTierCode: input.rewardTierCode,
         gfAccountName: maskAccountName(gfAccountName)
       }

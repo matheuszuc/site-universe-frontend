@@ -1,8 +1,6 @@
 /*
   Warnings:
 
-  - A unique constraint covering the columns `[game_account_id]` on the table `game_accounts` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[reward_tier_claim_id]` on the table `game_deliveries` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[idempotency_key]` on the table `user_reward_tier_claims` will be added. If there are existing duplicate values, this will fail.
 
 */
@@ -13,16 +11,7 @@ ALTER TABLE "game_deliveries" ALTER COLUMN "id" DROP DEFAULT;
 ALTER TABLE "user_reward_cycle_progress_events" RENAME CONSTRAINT "urc_progress_events_pkey" TO "user_reward_cycle_progress_events_pkey";
 
 -- CreateIndex
-CREATE UNIQUE INDEX "game_accounts_game_account_id_key" ON "game_accounts"("game_account_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "game_deliveries_reward_tier_claim_id_key" ON "game_deliveries"("reward_tier_claim_id");
-
--- CreateIndex
 CREATE INDEX "legacy_account_migration_sessions_session_token_hash_idx" ON "legacy_account_migration_sessions"("session_token_hash");
-
--- CreateIndex
-CREATE INDEX "reward_deliveries_status_next_retry_at_idx" ON "reward_deliveries"("status", "next_retry_at");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "user_reward_tier_claims_idempotency_key_key" ON "user_reward_tier_claims"("idempotency_key");
