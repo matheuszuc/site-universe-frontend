@@ -66,7 +66,7 @@ export default function UserRewardScale() {
     try {
       await claimRewardTier(tier.code)
       await loadScale()
-      setSuccessMessage('Resgate registrado. A entrega da caixa ficará pendente até a integração do jogo.')
+      setSuccessMessage('Resgate registrado. A entrega da caixa será processada para a conta vinculada.')
     } catch {
       setErrorMessage('Não foi possível registrar o resgate. Tente novamente.')
     } finally {
@@ -79,7 +79,7 @@ export default function UserRewardScale() {
       <main className="panel-main">
         <section className="panel-hero">
           <p className="panel-hero-kicker">Escala de recompensas</p>
-          <h1>Progresso do ciclo</h1>
+          <h1>Escala de recompensas</h1>
           <p>
             A escala usa o AP obtido em compras do site. O AP gasto dentro do jogo não reduz
             este progresso.
@@ -135,8 +135,8 @@ export default function UserRewardScale() {
             </section>
 
             <div className="mt-5 rounded-lg border border-white/15 bg-white/[0.08] p-4 text-sm leading-relaxed text-white/65">
-              Quando o Rank 6 for concluído, o backend inicia um novo ciclo. A entrega real no
-              jogo ainda depende de integração futura.
+              Quando o Rank 6 for concluído, o sistema inicia um novo ciclo mantendo o AP
+              excedente em compras para a próxima escala.
             </div>
           </>
         ) : (
