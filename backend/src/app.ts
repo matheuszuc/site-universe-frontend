@@ -7,6 +7,7 @@ import Fastify from "fastify";
 import { corsOptions } from "./config/cors.js";
 import { env, isDevelopment } from "./config/env.js";
 import { accountMigrationRoutes } from "./modules/account-migration/account-migration.routes.js";
+import { adminRoutes } from "./modules/admin/admin.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
 import { devPaymentsRoutes } from "./modules/dev/dev-payments.routes.js";
@@ -55,6 +56,9 @@ export async function buildApp() {
   });
   await app.register(authRoutes, {
     prefix: "/auth"
+  });
+  await app.register(adminRoutes, {
+    prefix: "/admin"
   });
   await app.register(dashboardRoutes, {
     prefix: "/users"

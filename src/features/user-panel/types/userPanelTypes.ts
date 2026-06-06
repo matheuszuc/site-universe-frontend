@@ -39,7 +39,7 @@ export type UserPanelData = {
     id: string
     name: string
     email: string
-    role: string
+    role: 'USER' | 'ADMIN'
     status: string
     accountStatus: AccountStatus
     emailVerified: boolean

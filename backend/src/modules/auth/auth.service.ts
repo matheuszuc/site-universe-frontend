@@ -150,7 +150,7 @@ export class AuthService {
       email: emailNormalized,
       emailNormalized,
       passwordHash,
-      role: "user",
+      role: "USER",
       status: "pending_verification",
       emailVerifiedAt: null
     });
