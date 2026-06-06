@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
+import AdminDashboard from '../pages/AdminDashboard'
 import ForgotPassword from '../pages/ForgotPassword'
 import Home from '../pages/Home'
 import Download from '../pages/Download'
@@ -29,6 +30,14 @@ export default function AppRoutes() {
       <Route path="/atualizar-conta" element={<UpdateLegacyAccount />} />
       <Route path="/terms" element={<TermsOfUse />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/painel"
         element={

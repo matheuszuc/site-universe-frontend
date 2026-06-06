@@ -32,10 +32,6 @@ export default function StorePackageCard({
       </h2>
       <p className="mt-2 text-lg font-black text-cyan-100">{storePackage.formattedPrice}</p>
 
-      <p className="mt-4 min-h-12 text-sm leading-relaxed text-white/65">
-        Pacote disponível no catálogo do Site Universe. O pedido será criado com status pendente.
-      </p>
-
       <Button
         className="mt-5 w-full"
         disabled={isCreating}

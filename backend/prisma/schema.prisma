@@ -13,7 +13,7 @@ model User {
   email              String    @unique
   emailNormalized    String    @unique @map("email_normalized")
   passwordHash       String    @map("password_hash")
-  role               String    @default("user")
+  role               String    @default("USER")
   status             String    @default("pending_verification")
   emailVerifiedAt    DateTime? @map("email_verified_at")
   failedLoginCount   Int       @default(0) @map("failed_login_count")
