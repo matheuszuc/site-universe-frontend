@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PublicLayout from '../components/layout/PublicLayout'
+import { useAuth } from '../contexts/AuthContext'
 import { gameClasses } from '../data/classes'
+import { clientDownloadUrl } from '../data/siteLinks'
 
 export default function Home() {
+  const { isAuthenticated, isLoading, user } = useAuth()
   const [active, setActive] = useState(0)
   const total = gameClasses.length
 
@@ -44,12 +47,28 @@ export default function Home() {
                 <h1>{gameClass.name}</h1>
                 <p className="description">{gameClass.description}</p>
                 <div className="home-actions">
-                  <Link className="home-action-button primary" to="/register">
-                    Criar conta
-                  </Link>
-                  <Link className="home-action-button secondary" to="/login">
-                    Entrar
-                  </Link>
+                  {!isLoading && isAuthenticated ? (
+                    <Link className="home-action-button primary" to="/painel">
+                      {user?.name ? `Painel de ${user.name}` : 'Ir para o painel'}
+                    </Link>
+                  ) : (
+                    <>
+                      <Link className="home-action-button primary" to="/register">
+                        Criar conta
+                      </Link>
+                      <Link className="home-action-button secondary" to="/login">
+                        Entrar
+                      </Link>
+                    </>
+                  )}
+                  <a
+                    className="home-action-button secondary"
+                    href={clientDownloadUrl}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    Download
+                  </a>
                 </div>
               </div>
             </article>

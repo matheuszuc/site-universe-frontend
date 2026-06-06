@@ -11,6 +11,29 @@ export type UserActivity = {
   createdAt: string
 }
 
+export type ApBalanceSummary = {
+  availableAp: number
+  cycleAccumulatedAp: number
+  currentCycleNumber: number | null
+  paidOrdersCount: number
+}
+
+export type UserOrderSummary = {
+  id: string
+  orderNumber: string
+  packageCode: string
+  packageName: string
+  apAmount: number
+  priceCents: number
+  formattedPrice: string
+  currency: string
+  status: string
+  createdAt: string
+  paidAt: string | null
+  paymentProvider: string | null
+  paymentStatus: string | null
+}
+
 export type UserPanelData = {
   user: {
     id: string
@@ -35,12 +58,15 @@ export type UserPanelData = {
     gameIntegrationEnabled: boolean
     paymentsEnabled: boolean
   }
+  balances: ApBalanceSummary
   activities: UserActivity[]
+  orders: UserOrderSummary[]
 }
 
 export type UserDashboardResponse = {
   user: Omit<UserPanelData['user'], 'accountStatus'>
   account: UserPanelData['account']
   features: UserPanelData['features']
+  balances: ApBalanceSummary
   activity: UserActivity[]
 }

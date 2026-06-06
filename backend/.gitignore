@@ -10,4 +10,9 @@ backend/.env
 
 # Geral
 *.log
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
 .DS_Store

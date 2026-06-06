@@ -1,6 +1,8 @@
 import { sessionCookieName } from "../../config/cookies.js";
+import { env } from "../../config/env.js";
 import { AppError } from "../../utils/safe-error.js";
 import { authCookieSchema } from "../auth/auth.schemas.js";
+import { mercadoPagoPixService } from "../payments/providers/mercado-pago-pix.service.js";
 import { securityEventsService } from "../security/security-events.service.js";
 import { sessionsService } from "../sessions/sessions.service.js";
 import { dashboardRepository, type SafeActivityType } from "./dashboard.repository.js";
@@ -110,6 +112,16 @@ export class DashboardService {
       throw new AppError(401, "UNAUTHORIZED", "Não autorizado.");
     }
 
+    if (env.EMAIL_REQUIRE_VERIFIED && !user.emailVerifiedAt) {
+      await securityEventsService.record({
+        userId: user.id,
+        eventType: "DASHBOARD_BLOCKED_EMAIL_NOT_VERIFIED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent
+      });
+      throw new AppError(403, "EMAIL_NOT_VERIFIED", "Confirme seu e-mail para continuar.");
+    }
+
     await sessionsService.touch(session.id);
 
     const activity = safeActivity.length
@@ -122,6 +134,7 @@ export class DashboardService {
           createdAt: event.createdAt
         }))
       : buildFallbackActivity(user);
+    const apSummary = await dashboardRepository.getUserApSummary(session.user.id);
 
     return {
       user: toDashboardUser(user),
@@ -131,11 +144,12 @@ export class DashboardService {
         emailStatusLabel: user.emailVerifiedAt ? "Verificado" : "Não verificado"
       },
       features: {
-        shopEnabled: false,
-        rewardsEnabled: false,
+        shopEnabled: true,
+        rewardsEnabled: true,
         gameIntegrationEnabled: false,
-        paymentsEnabled: false
+        paymentsEnabled: mercadoPagoPixService.isEnabled()
       },
+      balances: apSummary,
       activity
     };
   }

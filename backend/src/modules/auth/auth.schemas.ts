@@ -28,6 +28,11 @@ export const verifyEmailQuerySchema = z.object({
   token: z.string().min(32)
 });
 
+export const verifyEmailCodeSchema = z.object({
+  email: z.string().trim().email(),
+  code: z.string().trim().regex(/^\d{6,8}$/)
+});
+
 export const resetPasswordSchema = z.object({
   token: z.string().min(32),
   password: passwordSchema
@@ -50,5 +55,6 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type EmailOnlyInput = z.infer<typeof emailOnlySchema>;
 export type VerifyEmailQuery = z.infer<typeof verifyEmailQuerySchema>;
+export type VerifyEmailCodeInput = z.infer<typeof verifyEmailCodeSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type AuthenticatedUser = z.infer<typeof authenticatedUserSchema>;

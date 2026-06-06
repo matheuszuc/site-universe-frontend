@@ -74,7 +74,7 @@ export const authApi = {
   },
 
   async resendVerification(email: string) {
-    const response = await apiRequest<SuccessResponse>('/auth/resend-verification', {
+    const response = await apiRequest<SuccessResponse>('/auth/resend-verification-email', {
       method: 'POST',
       body: { email },
     })
@@ -88,6 +88,15 @@ export const authApi = {
     )
 
     return toResult(response, 'E-mail verificado com sucesso.')
+  },
+
+  async verifyEmailCode(email: string, code: string) {
+    const response = await apiRequest<SuccessResponse>('/auth/verify-email-code', {
+      method: 'POST',
+      body: { email, code },
+    })
+
+    return toResult(response, 'E-mail confirmado com sucesso.')
   },
 
   async forgotPassword(email: string) {

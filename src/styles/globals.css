@@ -411,6 +411,47 @@ button {
   color: rgba(255, 255, 255, 0.88);
 }
 
+.legacy-security-note,
+.legacy-account-found {
+  border: 1px solid rgba(153, 246, 228, 0.22);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.58);
+  padding: 12px 14px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.legacy-account-found strong {
+  color: #fff;
+}
+
+.password-checklist {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.34);
+  padding: 12px 14px;
+}
+
+.password-checklist span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.password-checklist span.valid {
+  color: #99f6e4;
+}
+
+.password-checklist i {
+  font-size: 1rem;
+}
+
 .legal-page {
   min-height: 100vh;
   padding: 132px 20px 56px;
@@ -490,6 +531,68 @@ button {
   margin: 28px auto 0;
   display: grid;
   gap: 14px;
+}
+
+.download-page {
+  min-height: 100vh;
+  padding: 132px 20px 56px;
+  background:
+    linear-gradient(135deg, rgba(0, 0, 0, 0.82), rgba(8, 14, 52, 0.92)),
+    url('/images/1920x1080-hd-space-ab4lm018jxlopn1i.jpg') center / cover fixed;
+}
+
+.download-hero,
+.download-steps {
+  width: min(100%, 960px);
+  margin: 0 auto;
+}
+
+.download-hero h1 {
+  margin: 0;
+  font-family: 'Rubik Mono One', monospace;
+  font-size: clamp(2.2rem, 7vw, 5rem);
+  line-height: 1.08;
+}
+
+.download-hero p {
+  max-width: 780px;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.download-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 32px;
+}
+
+.download-step {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.72);
+  padding: 18px;
+}
+
+.download-step span {
+  color: #99f6e4;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.download-step p {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.76);
+  line-height: 1.6;
 }
 
 .legal-section {
@@ -732,6 +835,458 @@ button {
   background: rgba(252, 165, 165, 0.12);
 }
 
+.store-grid,
+.reward-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.store-package-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(153, 246, 228, 0.48);
+  border-radius: 999px;
+  background: rgba(153, 246, 228, 0.14);
+  padding: 6px 10px;
+  color: #ccfbf1;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.store-coin-stack {
+  position: relative;
+  width: 72px;
+  height: 58px;
+  margin-bottom: 18px;
+}
+
+.store-coin-stack span {
+  position: absolute;
+  left: 0;
+  width: 58px;
+  height: 24px;
+  border: 1px solid rgba(254, 240, 138, 0.74);
+  border-radius: 50%;
+  background:
+    linear-gradient(180deg, rgba(254, 240, 138, 0.95), rgba(217, 119, 6, 0.84)),
+    #facc15;
+  box-shadow: 0 10px 26px rgba(250, 204, 21, 0.16);
+}
+
+.store-coin-stack span:nth-child(1) {
+  top: 28px;
+}
+
+.store-coin-stack span:nth-child(2) {
+  top: 16px;
+  left: 8px;
+}
+
+.store-coin-stack span:nth-child(3) {
+  top: 4px;
+  left: 16px;
+}
+
+.store-order-modal {
+  width: min(100%, 560px);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.store-order-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.store-order-summary div {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 10px;
+}
+
+.store-order-summary span {
+  display: block;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.store-order-summary strong {
+  display: block;
+  margin-top: 3px;
+  color: white;
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+.store-order-warning {
+  margin-top: 14px;
+  border: 1px solid rgba(252, 211, 77, 0.34);
+  border-radius: 8px;
+  background: rgba(252, 211, 77, 0.1);
+  padding: 12px;
+  color: #fef3c7;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.store-pix-qr {
+  display: grid;
+  justify-items: center;
+  margin-top: 14px;
+}
+
+.store-pix-qr img {
+  width: min(220px, 100%);
+  max-height: 220px;
+  border: 6px solid white;
+  border-radius: 8px;
+  background: white;
+}
+
+.store-pix-copy {
+  margin-top: 14px;
+}
+
+.store-pix-copy span {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.store-pix-copy textarea {
+  height: 74px;
+  max-height: 96px;
+  width: 100%;
+  resize: none;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 12px;
+  color: white;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.store-order-status-note {
+  margin-top: 10px;
+  color: #ccfbf1;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.store-order-status-error {
+  color: #fecaca;
+}
+
+.store-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.store-order-actions button {
+  flex: 1 1 190px;
+}
+
+.reward-status-badge {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.reward-youtube-note {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.reward-youtube-note a {
+  color: #a5f3fc;
+  font-weight: 900;
+  text-decoration: underline;
+  text-decoration-color: rgba(165, 243, 252, 0.7);
+  text-underline-offset: 4px;
+}
+
+.reward-youtube-note a:hover {
+  color: #fff;
+}
+
+.reward-item-slot {
+  min-height: 116px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+  text-align: center;
+  font-weight: 800;
+}
+
+.reward-item-slot small {
+  display: block;
+  color: rgba(153, 246, 228, 0.82);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cycle-progress-track {
+  height: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cycle-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #67e8f9, #bef264);
+}
+
+.panel-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 6, 23, 0.78);
+  padding: 20px;
+  backdrop-filter: blur(12px);
+}
+
+.panel-modal {
+  position: relative;
+  width: min(100%, 460px);
+  border: 1px solid rgba(153, 246, 228, 0.38);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.96);
+  padding: 24px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.panel-modal h2 {
+  margin: 8px 0 0;
+  color: white;
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+
+.panel-modal p {
+  margin: 14px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.7;
+}
+
+.panel-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  color: white;
+  font-size: 1.35rem;
+}
+
+.panel-modal-close:hover {
+  border-color: rgba(153, 246, 228, 0.62);
+  background: rgba(153, 246, 228, 0.12);
+}
+
+.reward-detail-modal {
+  width: min(100%, 920px);
+  max-height: min(88vh, 760px);
+  overflow: auto;
+}
+
+.reward-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-right: 44px;
+}
+
+.reward-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.reward-detail-meta div,
+.reward-detail-note,
+.reward-detail-empty {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 12px;
+}
+
+.reward-detail-meta span {
+  display: block;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.reward-detail-meta strong {
+  display: block;
+  margin-top: 4px;
+  color: white;
+  font-size: 1.2rem;
+}
+
+.reward-detail-note {
+  margin-top: 12px;
+  border-color: rgba(252, 211, 77, 0.34);
+  background: rgba(252, 211, 77, 0.1);
+  color: #fef3c7;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.reward-detail-section {
+  margin-top: 22px;
+}
+
+.reward-detail-section h3 {
+  margin: 0 0 12px;
+  color: white;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.reward-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.reward-option-card {
+  min-height: 86px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 14px;
+  color: white;
+  text-align: left;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.reward-option-card:hover,
+.reward-option-card.selected {
+  border-color: rgba(153, 246, 228, 0.62);
+  background: rgba(153, 246, 228, 0.12);
+}
+
+.reward-option-card strong,
+.reward-detail-item strong {
+  display: block;
+  color: white;
+  font-weight: 900;
+}
+
+.reward-option-card small,
+.reward-detail-item p {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.reward-option-check {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(153, 246, 228, 0.36);
+  border-radius: 999px;
+  color: #99f6e4;
+}
+
+.reward-detail-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.reward-detail-item {
+  min-height: 0;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 12px;
+}
+
+.reward-detail-item span {
+  display: inline-block;
+  margin-top: 2px;
+  color: #99f6e4;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.reward-detail-empty {
+  margin-top: 12px;
+  color: rgba(255, 255, 255, 0.68);
+  font-weight: 800;
+}
+
+.reward-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 22px;
+}
+
 @media (max-width: 900px) {
   .site-header {
     align-items: flex-start;
@@ -791,6 +1346,12 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .store-grid,
+  .reward-grid,
+  .download-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .panel-home-link {
     margin-top: 0;
   }
@@ -827,5 +1388,53 @@ button {
     align-items: flex-start;
     gap: 14px;
     flex-direction: column;
+  }
+
+  .store-grid,
+  .reward-grid,
+  .download-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .reward-detail-header,
+  .reward-detail-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .reward-detail-meta,
+  .reward-option-grid,
+  .reward-detail-items,
+  .store-order-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-modal-backdrop {
+    padding: 12px;
+  }
+
+  .store-order-modal {
+    width: min(100%, 540px);
+    max-height: 90vh;
+    padding: 18px;
+  }
+
+  .store-pix-qr img {
+    width: min(200px, 100%);
+    max-height: 200px;
+  }
+
+  .store-order-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .store-order-actions button {
+    width: 100%;
+  }
+
+  .store-package-badge {
+    position: static;
+    margin-bottom: 14px;
   }
 }

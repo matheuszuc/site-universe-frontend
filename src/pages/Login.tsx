@@ -12,8 +12,9 @@ import LoadingButton from '../components/ui/LoadingButton'
 import PasswordInput from '../components/ui/PasswordInput'
 import { useAuth } from '../contexts/AuthContext'
 import { loginSchema } from '../features/auth/schemas/loginSchema'
+import { authApi } from '../features/auth/services/authApi'
 import type { LoginFormValues } from '../features/auth/types/authTypes'
-import { getApiErrorMessage } from '../services/api'
+import { ApiError, getApiErrorMessage } from '../services/api'
 
 type LoginLocationState = {
   from?: {
@@ -26,6 +27,9 @@ export default function Login() {
   const location = useLocation()
   const navigate = useNavigate()
   const [errorMessage, setErrorMessage] = useState<string>()
+  const [isResendingVerification, setIsResendingVerification] = useState(false)
+  const [resendMessage, setResendMessage] = useState<string>()
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string>()
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -40,13 +44,37 @@ export default function Login() {
 
   async function onSubmit(values: LoginFormValues) {
     setErrorMessage(undefined)
+    setResendMessage(undefined)
+    setUnverifiedEmail(undefined)
 
     try {
       await login(values)
       const redirectTo = ((location.state as LoginLocationState | null)?.from?.pathname) ?? '/painel'
       navigate(redirectTo, { replace: true })
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(values.email)
+      }
+
       setErrorMessage(getApiErrorMessage(error))
+    }
+  }
+
+  async function handleResendVerification() {
+    if (!unverifiedEmail) {
+      return
+    }
+
+    setIsResendingVerification(true)
+    setResendMessage(undefined)
+
+    try {
+      const result = await authApi.resendVerification(unverifiedEmail)
+      setResendMessage(result.message)
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error))
+    } finally {
+      setIsResendingVerification(false)
     }
   }
 
@@ -61,6 +89,7 @@ export default function Login() {
 
           <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
             {errorMessage && <Alert tone="error">{errorMessage}</Alert>}
+            {resendMessage && <Alert tone="success">{resendMessage}</Alert>}
 
             <div>
               <label className="auth-label" htmlFor="email">
@@ -101,10 +130,29 @@ export default function Login() {
               Login
             </LoadingButton>
 
+            {unverifiedEmail && (
+              <LoadingButton
+                className="w-full"
+                isLoading={isResendingVerification}
+                loadingText="Reenviando..."
+                onClick={handleResendVerification}
+                type="button"
+              >
+                Reenviar e-mail
+              </LoadingButton>
+            )}
+
             <p className="text-center text-sm text-white/75">
               Não tem uma conta?{' '}
               <Link className="font-bold text-white hover:text-cyan-100" to="/register">
                 Cadastre-se
+              </Link>
+            </p>
+
+            <p className="text-center text-sm text-white/75">
+              Tem uma conta antiga?{' '}
+              <Link className="font-bold text-white hover:text-cyan-100" to="/atualizar-conta">
+                Atualizar conta
               </Link>
             </p>
           </form>

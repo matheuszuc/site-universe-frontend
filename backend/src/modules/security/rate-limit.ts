@@ -79,6 +79,20 @@ function getEmailFromBody(body: unknown) {
   return normalizeEmail(email);
 }
 
+function getGameLoginFromBody(body: unknown) {
+  if (!body || typeof body !== "object" || !("gameLogin" in body)) {
+    return null;
+  }
+
+  const gameLogin = (body as { gameLogin?: unknown }).gameLogin;
+
+  if (typeof gameLogin !== "string") {
+    return null;
+  }
+
+  return gameLogin.trim().toLowerCase();
+}
+
 function buildRateLimitError(message: string) {
   return new AppError(429, "RATE_LIMITED", message);
 }
@@ -170,6 +184,37 @@ export async function passwordResetRateLimit(request: FastifyRequest, _reply: Fa
   );
 
   if (!allowed) {
+    throw buildRateLimitError("Muitas tentativas. Tente novamente em instantes.");
+  }
+}
+
+export async function accountMigrationRateLimit(
+  request: FastifyRequest,
+  _reply: FastifyReply
+) {
+  const gameLogin = getGameLoginFromBody(request.body);
+  const keys = [`account-migration:ip:${request.ip}`];
+
+  if (gameLogin) {
+    keys.push(`account-migration:login:${gameLogin}`);
+  }
+
+  const allowed = keys.every((key) =>
+    consumeRateLimit({
+      key,
+      max: env.ACCOUNT_MIGRATION_RATE_LIMIT_MAX,
+      window: env.ACCOUNT_MIGRATION_RATE_LIMIT_WINDOW
+    })
+  );
+
+  if (!allowed) {
+    await securityEventsService.record({
+      eventType: "ACCOUNT_MIGRATION_BLOCKED_RATE_LIMIT",
+      ip: request.ip,
+      userAgent: request.headers["user-agent"],
+      metadata: gameLogin ? { gameLogin } : undefined
+    });
+
     throw buildRateLimitError("Muitas tentativas. Tente novamente em instantes.");
   }
 }

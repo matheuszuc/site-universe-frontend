@@ -17,6 +17,7 @@ import {
   registerController,
   resendVerificationController,
   resetPasswordController,
+  verifyEmailCodeController,
   verifyEmailController
 } from "./auth.controller.js";
 
@@ -56,7 +57,21 @@ export async function authRoutes(app: FastifyInstance) {
     },
     resendVerificationController
   );
+  app.post(
+    "/resend-verification-email",
+    {
+      preHandler: [requireAllowedOrigin, requireJsonContentType, emailVerificationRateLimit]
+    },
+    resendVerificationController
+  );
   app.get("/verify-email", verifyEmailController);
+  app.post(
+    "/verify-email-code",
+    {
+      preHandler: [requireAllowedOrigin, requireJsonContentType, emailVerificationRateLimit]
+    },
+    verifyEmailCodeController
+  );
   app.post(
     "/forgot-password",
     {

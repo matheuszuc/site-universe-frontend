@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AccountSummaryCard from '../features/user-panel/components/AccountSummaryCard'
 import ActivityHistory from '../features/user-panel/components/ActivityHistory'
-import BalanceCard from '../features/user-panel/components/BalanceCard'
 import EmailVerificationCard from '../features/user-panel/components/EmailVerificationCard'
 import QuickActions from '../features/user-panel/components/QuickActions'
 import { getUserPanelData } from '../features/user-panel/services/userPanelService'
@@ -69,6 +68,39 @@ export default function UserDashboard() {
     }
   }, [navigate, setUser])
 
+  useEffect(() => {
+    let isMounted = true
+
+    async function refreshDashboardAfterPayment() {
+      try {
+        const data = await getUserPanelData()
+
+        if (!isMounted) {
+          return
+        }
+
+        setPanelData(data)
+        setUser({
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+          status: data.user.status,
+          emailVerified: data.user.emailVerified,
+        })
+      } catch {
+        // The next explicit dashboard load will show any persistent backend error.
+      }
+    }
+
+    window.addEventListener('site-universe:payment-updated', refreshDashboardAfterPayment)
+
+    return () => {
+      isMounted = false
+      window.removeEventListener('site-universe:payment-updated', refreshDashboardAfterPayment)
+    }
+  }, [setUser])
+
   return (
     <AuthenticatedLayout>
       <main className="panel-main">
@@ -94,16 +126,15 @@ export default function UserDashboard() {
         )}
 
         {!isLoading && panelData && (
-          <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
-            <div className="grid gap-4 md:grid-cols-2">
-              <AccountSummaryCard account={panelData.account} user={panelData.user} />
-              <BalanceCard />
-              <div className="md:col-span-2">
-                <EmailVerificationCard user={panelData.user} />
-              </div>
-              <ActivityHistory activities={panelData.activities} />
-            </div>
+          <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+            <AccountSummaryCard account={panelData.account} user={panelData.user} />
             <QuickActions />
+            <div className="lg:col-span-2">
+              <EmailVerificationCard user={panelData.user} />
+            </div>
+            <div className="lg:col-span-2">
+              <ActivityHistory activities={panelData.activities} orders={panelData.orders} />
+            </div>
           </section>
         )}
       </main>
