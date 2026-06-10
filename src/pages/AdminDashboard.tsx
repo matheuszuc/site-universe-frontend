@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useTranslation } from '../i18n'
 import { adminApi } from '../features/admin/services/adminApi'
 import type { AdminMeResponse } from '../features/admin/types/adminTypes'
 import AdminLayout from '../layouts/AdminLayout'
@@ -8,6 +9,7 @@ import { ApiError, getApiErrorMessage } from '../services/api'
 
 export default function AdminDashboard() {
   const { setUser } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [adminMe, setAdminMe] = useState<AdminMeResponse | null>(null)
   const [errorMessage, setErrorMessage] = useState<string>()
@@ -29,9 +31,7 @@ export default function AdminDashboard() {
           setAdminMe(response)
         }
       } catch (error) {
-        if (!isMounted) {
-          return
-        }
+        if (!isMounted) return
 
         setAdminMe(null)
 
@@ -48,9 +48,7 @@ export default function AdminDashboard() {
 
         setErrorMessage(getApiErrorMessage(error))
       } finally {
-        if (isMounted) {
-          setIsLoading(false)
-        }
+        if (isMounted) setIsLoading(false)
       }
     }
 
@@ -65,20 +63,20 @@ export default function AdminDashboard() {
     <AdminLayout>
       <main className="panel-main">
         <section className="panel-hero">
-          <p className="panel-hero-kicker">Site Universe</p>
-          <h1>Base Admin</h1>
-          <p>Área inicial para administração segura dos fluxos do site.</p>
+          <p className="panel-hero-kicker">{t.admin.baseKicker}</p>
+          <h1>{t.admin.baseTitle}</h1>
+          <p>{t.admin.baseSubtitle}</p>
         </section>
 
         {isLoading && (
           <div className="panel-state" role="status">
-            Validando acesso admin...
+            {t.admin.validating}
           </div>
         )}
 
         {!isLoading && isForbidden && (
           <div className="panel-state panel-state-error" role="alert">
-            Acesso negado.
+            {t.admin.accessDenied}
           </div>
         )}
 
@@ -91,15 +89,15 @@ export default function AdminDashboard() {
         {!isLoading && adminMe && (
           <section className="grid gap-4 md:grid-cols-2">
             <article className="panel-card">
-              <p className="panel-card-kicker">Sessão admin</p>
-              <h2 className="panel-card-title">Acesso confirmado</h2>
+              <p className="panel-card-kicker">{t.admin.sessionKicker}</p>
+              <h2 className="panel-card-title">{t.admin.sessionTitle}</h2>
               <dl className="mt-4 grid gap-3 text-sm">
                 <div>
-                  <dt className="text-cyan-100/80">Status</dt>
-                  <dd className="mt-1 font-semibold text-white">Autorizado</dd>
+                  <dt className="text-cyan-100/80">{t.admin.statusLabel}</dt>
+                  <dd className="mt-1 font-semibold text-white">{t.admin.authorized}</dd>
                 </div>
                 <div>
-                  <dt className="text-cyan-100/80">Role</dt>
+                  <dt className="text-cyan-100/80">{t.admin.roleLabel}</dt>
                   <dd className="mt-1 font-semibold text-white">{adminMe.role}</dd>
                 </div>
               </dl>

@@ -22,6 +22,13 @@ const locales: Record<Language, Translations> = {
   fr,
 }
 
+const localeNumberFormat: Record<Language, string> = {
+  'pt-BR': 'pt-BR',
+  'en-US': 'en-US',
+  es: 'es-ES',
+  fr: 'fr-FR',
+}
+
 export const LANGUAGE_OPTIONS: { value: Language; label: string; short: string }[] = [
   { value: 'pt-BR', label: 'Português (Brasil)', short: 'PT' },
   { value: 'en-US', label: 'English', short: 'EN' },
@@ -46,6 +53,7 @@ type I18nContextValue = {
   lang: Language
   t: Translations
   setLanguage: (lang: Language) => void
+  formatAmount: (amount: number) => string
 }
 
 const I18nContext = createContext<I18nContextValue | undefined>(undefined)
@@ -62,13 +70,19 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const formatAmount = useCallback(
+    (amount: number) => new Intl.NumberFormat(localeNumberFormat[lang]).format(amount),
+    [lang],
+  )
+
   const value = useMemo(
     () => ({
       lang,
       t: locales[lang],
       setLanguage,
+      formatAmount,
     }),
-    [lang, setLanguage],
+    [lang, setLanguage, formatAmount],
   )
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>

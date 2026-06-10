@@ -1,20 +1,12 @@
 import { useEffect, type MouseEvent } from 'react'
 import Button from '../../../components/ui/Button'
-import { formatApAmount } from '../../../data/storePackages'
+import { useTranslation } from '../../../i18n'
 import {
   getRewardTierPublicTitle,
   type RewardItem,
   type RewardTier,
   type RewardTierStatus,
 } from '../../../data/rewardTiers'
-
-const statusLabels: Record<RewardTierStatus, string> = {
-  locked: 'Bloqueado',
-  eligible: 'Liberado',
-  claimed: 'Resgatado',
-  delivery_pending: 'Entrega pendente',
-  delivered: 'Entregue',
-}
 
 const statusClasses: Record<RewardTierStatus, string> = {
   locked: 'border-white/15 bg-white/[0.08] text-white/60',
@@ -33,43 +25,19 @@ type RewardTierDetailsModalProps = {
 }
 
 function RewardItemCard({ item }: { item: RewardItem }) {
+  const { t } = useTranslation()
+  const displayName = t.rewards.items[item.name] ?? item.name
+  const quantityLabel = t.rewards.quantityLabel.replace('{qty}', String(item.quantity))
+
   return (
     <div className="reward-detail-item">
       <div>
-        <strong>{item.name}</strong>
-        <span>Quantidade: {item.quantity}</span>
+        <strong>{displayName}</strong>
+        <span>{quantityLabel}</span>
         {item.description && <p>{item.description}</p>}
       </div>
     </div>
   )
-}
-
-function getRewardSummary(tier: RewardTier) {
-  if (tier.items.length > 0) {
-    return `${tier.items.length} ${tier.items.length === 1 ? 'item na caixa' : 'itens na caixa'}`
-  }
-
-  return 'Caixa de recompensas'
-}
-
-function getActionLabel(status: RewardTierStatus, isClaiming: boolean) {
-  if (isClaiming) {
-    return 'Registrando resgate...'
-  }
-
-  if (status === 'locked') {
-    return 'Bloqueado'
-  }
-
-  if (status === 'claimed' || status === 'delivered') {
-    return 'Resgatado'
-  }
-
-  if (status === 'delivery_pending') {
-    return 'Entrega pendente'
-  }
-
-  return 'Resgatar caixa'
 }
 
 export default function RewardTierDetailsModal({
@@ -79,9 +47,39 @@ export default function RewardTierDetailsModal({
   onClose,
   tier,
 }: RewardTierDetailsModalProps) {
+  const { t, formatAmount } = useTranslation()
   const missingUp = Math.max(0, tier.requiredUpTotal - currentUp)
   const canClaim = tier.status === 'eligible'
   const rankTitle = getRewardTierPublicTitle(tier)
+
+  const statusLabels: Record<RewardTierStatus, string> = {
+    locked: t.rewards.statusLocked,
+    eligible: t.rewards.statusEligible,
+    claimed: t.rewards.statusClaimed,
+    delivery_pending: t.rewards.statusDeliveryPending,
+    delivered: t.rewards.statusDelivered,
+  }
+
+  function getRewardSummary() {
+    if (tier.items.length > 0) {
+      return tier.items.length === 1
+        ? t.rewards.itemInBox.replace('{count}', String(tier.items.length))
+        : t.rewards.itemsInBox.replace('{count}', String(tier.items.length))
+    }
+    return t.rewards.rewardBox
+  }
+
+  function getActionLabel() {
+    if (isClaiming) return t.rewards.registeringClaim
+    if (tier.status === 'locked') return t.rewards.statusLocked
+    if (tier.status === 'claimed' || tier.status === 'delivered') return t.rewards.statusClaimed
+    if (tier.status === 'delivery_pending') return t.rewards.statusDeliveryPending
+    return t.rewards.claimBox
+  }
+
+  const modalTitle = t.rewards.rewardsOf.replace('{rank}', rankTitle)
+  const goalLabel = t.rewards.goal.replace('{amount}', formatAmount(tier.requiredUpTotal))
+  const missingLabel = t.rewards.missingToUnlock.replace('{amount}', formatAmount(missingUp))
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -110,7 +108,7 @@ export default function RewardTierDetailsModal({
         role="dialog"
       >
         <button
-          aria-label="Fechar detalhes do rank"
+          aria-label={t.rewards.closeModalLabel}
           className="panel-modal-close"
           onClick={onClose}
           type="button"
@@ -120,7 +118,7 @@ export default function RewardTierDetailsModal({
 
         <div className="reward-detail-header">
           <div>
-            <h2 id="reward-tier-modal-title">Recompensas do {rankTitle}</h2>
+            <h2 id="reward-tier-modal-title">{modalTitle}</h2>
           </div>
           <span className={`reward-status-badge ${statusClasses[tier.status]}`}>
             {statusLabels[tier.status]}
@@ -129,26 +127,24 @@ export default function RewardTierDetailsModal({
 
         <div className="reward-detail-meta">
           <div>
-            <span>Meta</span>
-            <strong>{formatApAmount(tier.requiredUpTotal)} AP</strong>
+            <span>{t.rewards.metaLabel}</span>
+            <strong>{goalLabel}</strong>
           </div>
           <div>
-            <span>Caixa visual</span>
-            <strong>{getRewardSummary(tier)}</strong>
+            <span>{t.rewards.boxPreview}</span>
+            <strong>{getRewardSummary()}</strong>
           </div>
         </div>
 
         {tier.status === 'locked' && (
-          <div className="reward-detail-note">
-            Faltam {formatApAmount(missingUp)} AP para liberar este rank.
-          </div>
+          <div className="reward-detail-note">{missingLabel}</div>
         )}
 
         <section className="reward-detail-section">
-          <h3>Itens dentro da caixa</h3>
+          <h3>{t.rewards.itemsInsideBox}</h3>
         </section>
 
-        <div className="reward-detail-items" aria-label="Itens dentro da caixa">
+        <div className="reward-detail-items" aria-label={t.rewards.itemsInsideBox}>
           {tier.items.map((item) => (
             <RewardItemCard item={item} key={`${item.name}-${item.quantity}`} />
           ))}
@@ -161,10 +157,10 @@ export default function RewardTierDetailsModal({
             variant={canClaim ? 'primary' : 'secondary'}
           >
             <i className="bx bx-gift text-xl" aria-hidden="true" />
-            {getActionLabel(tier.status, isClaiming)}
+            {getActionLabel()}
           </Button>
           <Button onClick={onClose} variant="ghost">
-            Fechar
+            {t.rewards.closeButton}
           </Button>
         </div>
       </div>

@@ -68,9 +68,9 @@ export default function UserRewardScale() {
     try {
       await claimRewardTier(tier.code)
       await loadScale()
-      setSuccessMessage('Resgate registrado. A entrega da caixa será processada para a conta vinculada.')
+      setSuccessMessage(t.rewards.claimSuccess)
     } catch {
-      setErrorMessage('Não foi possível registrar o resgate. Tente novamente.')
+      setErrorMessage(t.rewards.claimError)
     } finally {
       setClaimingTierCode(undefined)
     }
@@ -80,20 +80,17 @@ export default function UserRewardScale() {
     <AuthenticatedLayout>
       <main className="panel-main">
         <section className="panel-hero">
-          <p className="panel-hero-kicker">Escala de recompensas</p>
-          <h1>Escala de recompensas</h1>
-          <p>
-            A escala usa o AP obtido em compras do site. O AP gasto dentro do jogo não reduz
-            este progresso.
-          </p>
+          <p className="panel-hero-kicker">{t.rewards.scaleKicker}</p>
+          <h1>{t.rewards.scaleTitle}</h1>
+          <p>{t.rewards.scaleDescription}</p>
           <p className="reward-youtube-note">
-            Para ver os visuais dos itens, confira no{' '}
+            {t.rewards.youtubeNote}{' '}
             <a
               href="https://youtube.com/@life_gx?si=uPc3KTTt9uHIXSzM"
               rel="noopener noreferrer"
               target="_blank"
             >
-              YouTube
+              {t.rewards.youtubeLinkLabel}
             </a>
             .
           </p>
@@ -113,7 +110,7 @@ export default function UserRewardScale() {
 
         {isLoading ? (
           <div className="panel-state" role="status">
-            Carregando escala...
+            {t.rewards.loading}
           </div>
         ) : scale ? (
           <>
@@ -124,7 +121,7 @@ export default function UserRewardScale() {
               nextRankName={nextRankName}
             />
 
-            <section className="reward-grid mt-5" aria-label="Ranks da escala de recompensas">
+            <section className="reward-grid mt-5" aria-label={t.rewards.scaleGridLabel}>
               {scale.tiers.map((tier) => (
                 <RewardTierCard
                   isClaiming={claimingTierCode === tier.code}
@@ -137,19 +134,16 @@ export default function UserRewardScale() {
             </section>
 
             <div className="mt-5 rounded-lg border border-white/15 bg-white/[0.08] p-4 text-sm leading-relaxed text-white/65">
-              Quando o Rank 6 for concluído, o sistema inicia um novo ciclo mantendo o AP
-              excedente em compras para a próxima escala.
+              {t.rewards.scaleCycleNote}
             </div>
           </>
         ) : (
-          <div className="panel-state">
-            Nenhum dado de escala disponível no momento.
-          </div>
+          <div className="panel-state">{t.rewards.noScaleData}</div>
         )}
 
         {!isLoading && errorMessage && (
           <Button className="mt-5" onClick={loadScale} variant="secondary">
-            Tentar novamente
+            {t.rewards.retryButton}
           </Button>
         )}
 

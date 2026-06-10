@@ -129,7 +129,7 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
         <h2 id="pending-order-modal-title">{statusLabel}</h2>
         <p>{t.store.orderCreated} {order.order.orderNumber} {t.store.orderCreatedNote}</p>
 
-        <div className="store-order-summary" aria-label="Resumo do pedido pendente">
+        <div className="store-order-summary" aria-label={t.store.orderSummaryLabel}>
           <div>
             <span>{t.store.packageLabel}</span>
             <strong>{order.order.packageName || storePackage.name}</strong>
@@ -150,7 +150,7 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
 
         {order.pix.qrCodeImage && (
           <div className="store-pix-qr">
-            <img alt="QR Code Pix do pedido" src={order.pix.qrCodeImage} />
+            <img alt={t.store.pixQrAlt} src={order.pix.qrCodeImage} />
           </div>
         )}
 

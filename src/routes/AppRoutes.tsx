@@ -1,5 +1,9 @@
 import { Route, Routes } from 'react-router-dom'
+import AdminAuditLogs from '../pages/AdminAuditLogs'
 import AdminDashboard from '../pages/AdminDashboard'
+import AdminGameDeliveries from '../pages/AdminGameDeliveries'
+import AdminOrders from '../pages/AdminOrders'
+import AdminUsers from '../pages/AdminUsers'
 import ForgotPassword from '../pages/ForgotPassword'
 import Home from '../pages/Home'
 import Download from '../pages/Download'
@@ -31,6 +35,7 @@ export default function AppRoutes() {
       <Route path="/atualizar-conta" element={<UpdateLegacyAccount />} />
       <Route path="/terms" element={<TermsOfUse />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
+
       <Route
         path="/admin"
         element={
@@ -39,6 +44,39 @@ export default function AppRoutes() {
           </AdminRoute>
         }
       />
+      <Route
+        path="/admin/users"
+        element={
+          <AdminRoute>
+            <AdminUsers />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/orders"
+        element={
+          <AdminRoute>
+            <AdminOrders />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/game-deliveries"
+        element={
+          <AdminRoute>
+            <AdminGameDeliveries />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/audit-logs"
+        element={
+          <AdminRoute>
+            <AdminAuditLogs />
+          </AdminRoute>
+        }
+      />
+
       <Route
         path="/painel"
         element={

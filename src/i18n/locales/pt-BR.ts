@@ -68,8 +68,55 @@ export type Translations = {
     simulatePayment: string; simulating: string; simulateError: string
     confirm: string; closeOrder: string; pixWaiting: string; paidDescription: string
     buy: string; buying: string
+    orderSummaryLabel: string; pixQrAlt: string
   }
-  rewards: { loadError: string; loading: string }
+  rewards: {
+    loadError: string; loading: string
+    scaleKicker: string; scaleTitle: string; scaleDescription: string
+    youtubeNote: string; youtubeLinkLabel: string
+    noScaleData: string; claimSuccess: string; claimError: string
+    retryButton: string; scaleCycleNote: string
+    progressTitle: string; progressSummary: string; progressNote: string
+    nextRank: string; missing: string
+    statusLocked: string; statusEligible: string; statusClaimed: string
+    statusDeliveryPending: string; statusDelivered: string
+    goal: string; itemsInBox: string; itemInBox: string
+    rewardBox: string; viewRewards: string; claimBox: string; claiming: string
+    rewardsOf: string; metaLabel: string; boxPreview: string
+    missingToUnlock: string; itemsInsideBox: string
+    quantityLabel: string; closeButton: string; registeringClaim: string
+    closeModalLabel: string; scaleGridLabel: string
+    items: Record<string, string>
+  }
+  admin: {
+    menuLabel: string; brandShort: string; brandTitle: string
+    baseLink: string; usersLink: string; ordersLink: string
+    gameDeliveriesLink: string; auditLogsLink: string
+    playerPanelLink: string; signOut: string; signingOut: string
+    administrationLabel: string; panelTitle: string
+    validating: string; accessDenied: string
+    baseKicker: string; baseTitle: string; baseSubtitle: string
+    sessionKicker: string; sessionTitle: string
+    statusLabel: string; authorized: string; roleLabel: string
+    usersKicker: string; usersTitle: string; usersSubtitle: string
+    usersLoading: string; usersEmpty: string
+    idLabel: string; nameLabel: string; emailLabel: string
+    emailVerifiedLabel: string; roleUserLabel: string; statusUserLabel: string
+    createdAtLabel: string; lastLoginLabel: string; yesLabel: string; noLabel: string
+    ordersKicker: string; ordersTitle: string; ordersSubtitle: string
+    ordersLoading: string; ordersEmpty: string
+    orderNumberLabel: string; packageLabel: string; amountLabel: string
+    orderStatusLabel: string; paidAtLabel: string
+    deliveriesKicker: string; deliveriesTitle: string; deliveriesSubtitle: string
+    deliveriesLoading: string; deliveriesEmpty: string
+    typeLabel: string; deliveryStatusLabel: string; attemptsLabel: string
+    deliveredAtLabel: string; lastErrorLabel: string
+    auditKicker: string; auditTitle: string; auditSubtitle: string
+    auditLoading: string; auditEmpty: string
+    eventTypeLabel: string; actorLabel: string; successLabel: string
+    reasonLabel: string; userLabel: string; orderLabel: string
+    noDataLabel: string; loadError: string
+  }
   home: {
     featuredClass: string; createAccount: string; signIn: string; download: string
     panelFallback: string; panelPrefix: string; prevClass: string; nextClass: string
@@ -270,11 +317,125 @@ const ptBR: Translations = {
     paidDescription: 'Pagamento confirmado. O saldo Unicoin será atualizado pelo servidor.',
     buy: 'Comprar Unicoin',
     buying: 'Criando pedido...',
+    orderSummaryLabel: 'Resumo do pedido',
+    pixQrAlt: 'QR Code Pix do pedido',
   },
 
   rewards: {
     loadError: 'Não foi possível carregar a escala de recompensas. Tente novamente.',
     loading: 'Carregando escala...',
+    scaleKicker: 'Escala de recompensas',
+    scaleTitle: 'Escala de recompensas',
+    scaleDescription: 'A escala usa o Unicoin obtido em compras do site. O Unicoin gasto dentro do jogo não reduz este progresso.',
+    youtubeNote: 'Para ver os visuais dos itens, confira no',
+    youtubeLinkLabel: 'YouTube',
+    noScaleData: 'Nenhum dado de escala disponível no momento.',
+    claimSuccess: 'Resgate registrado. A entrega da caixa será processada para a conta vinculada.',
+    claimError: 'Não foi possível registrar o resgate. Tente novamente.',
+    retryButton: 'Tentar novamente',
+    scaleCycleNote: 'Quando o Rank 6 for concluído, o sistema inicia um novo ciclo mantendo o Unicoin excedente em compras para a próxima escala.',
+    progressTitle: 'Progresso da escala',
+    progressSummary: '{current} / {max} Unicoin em compras',
+    progressNote: 'Baseado nas compras de Unicoin registradas no site. Ao atingir a meta de cada rank, uma caixa de recompensas fica liberada para resgate.',
+    nextRank: 'Próximo rank',
+    missing: 'Faltam {amount} Unicoin',
+    statusLocked: 'Bloqueado',
+    statusEligible: 'Liberado',
+    statusClaimed: 'Resgatado',
+    statusDeliveryPending: 'Entrega pendente',
+    statusDelivered: 'Entregue',
+    goal: 'Meta: {amount} Unicoin',
+    itemsInBox: '{count} itens na caixa',
+    itemInBox: '{count} item na caixa',
+    rewardBox: 'Caixa de recompensas',
+    viewRewards: 'Ver recompensas',
+    claimBox: 'Resgatar caixa',
+    claiming: 'Registrando...',
+    rewardsOf: 'Recompensas do {rank}',
+    metaLabel: 'Meta',
+    boxPreview: 'Caixa visual',
+    missingToUnlock: 'Faltam {amount} Unicoin para liberar este rank.',
+    itemsInsideBox: 'Itens dentro da caixa',
+    quantityLabel: 'Quantidade: {qty}',
+    closeButton: 'Fechar',
+    registeringClaim: 'Registrando resgate...',
+    closeModalLabel: 'Fechar detalhes do rank',
+    scaleGridLabel: 'Ranks da escala de recompensas',
+    items: {},
+  },
+
+  admin: {
+    menuLabel: 'Menu administrativo do site',
+    brandShort: 'SU',
+    brandTitle: 'Admin',
+    baseLink: 'Base Admin',
+    usersLink: 'Usuários',
+    ordersLink: 'Pedidos',
+    gameDeliveriesLink: 'Entregas GF',
+    auditLogsLink: 'Auditoria',
+    playerPanelLink: 'Painel do jogador',
+    signOut: 'Sair',
+    signingOut: 'Saindo...',
+    administrationLabel: 'Administração do site',
+    panelTitle: 'Painel Admin',
+    validating: 'Validando acesso admin...',
+    accessDenied: 'Acesso negado.',
+    baseKicker: 'Site Universe',
+    baseTitle: 'Base Admin',
+    baseSubtitle: 'Área inicial para administração segura dos fluxos do site.',
+    sessionKicker: 'Sessão admin',
+    sessionTitle: 'Acesso confirmado',
+    statusLabel: 'Status',
+    authorized: 'Autorizado',
+    roleLabel: 'Role',
+    usersKicker: 'Administração',
+    usersTitle: 'Usuários',
+    usersSubtitle: 'Lista de contas cadastradas no site.',
+    usersLoading: 'Carregando usuários...',
+    usersEmpty: 'Nenhum usuário encontrado.',
+    idLabel: 'ID',
+    nameLabel: 'Nome',
+    emailLabel: 'E-mail',
+    emailVerifiedLabel: 'E-mail verificado',
+    roleUserLabel: 'Role',
+    statusUserLabel: 'Status',
+    createdAtLabel: 'Criado em',
+    lastLoginLabel: 'Último login',
+    yesLabel: 'Sim',
+    noLabel: 'Não',
+    ordersKicker: 'Administração',
+    ordersTitle: 'Pedidos',
+    ordersSubtitle: 'Pedidos recentes de Unicoin.',
+    ordersLoading: 'Carregando pedidos...',
+    ordersEmpty: 'Nenhum pedido encontrado.',
+    orderNumberLabel: 'Nº do pedido',
+    packageLabel: 'Pacote',
+    amountLabel: 'Valor',
+    orderStatusLabel: 'Status',
+    paidAtLabel: 'Pago em',
+    deliveriesKicker: 'Administração',
+    deliveriesTitle: 'Entregas GF',
+    deliveriesSubtitle: 'Entregas de itens para o jogo.',
+    deliveriesLoading: 'Carregando entregas...',
+    deliveriesEmpty: 'Nenhuma entrega encontrada.',
+    typeLabel: 'Tipo',
+    deliveryStatusLabel: 'Status',
+    attemptsLabel: 'Tentativas',
+    deliveredAtLabel: 'Entregue em',
+    lastErrorLabel: 'Último erro',
+    auditKicker: 'Administração',
+    auditTitle: 'Auditoria',
+    auditSubtitle: 'Logs de auditoria de pagamentos.',
+    auditLoading: 'Carregando auditoria...',
+    auditEmpty: 'Nenhum log encontrado.',
+    eventTypeLabel: 'Tipo de evento',
+    actorLabel: 'Ator',
+    successLabel: 'Sucesso',
+    reasonLabel: 'Motivo',
+    userLabel: 'Usuário',
+    orderLabel: 'Pedido',
+    noDataLabel: '—',
+    loadError: 'Erro ao carregar dados.',
   },
 
   home: {
