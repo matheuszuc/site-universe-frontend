@@ -8,10 +8,12 @@ import { getUserPanelData } from '../features/user-panel/services/userPanelServi
 import type { UserPanelData } from '../features/user-panel/types/userPanelTypes'
 import AuthenticatedLayout from '../layouts/AuthenticatedLayout'
 import { useAuth } from '../contexts/AuthContext'
+import { useTranslation } from '../i18n'
 import { ApiError, getApiErrorMessage } from '../services/api'
 
 export default function UserDashboard() {
   const { setUser } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [panelData, setPanelData] = useState<UserPanelData | null>(null)
   const [errorMessage, setErrorMessage] = useState<string>()
@@ -105,17 +107,14 @@ export default function UserDashboard() {
     <AuthenticatedLayout>
       <main className="panel-main">
         <section className="panel-hero">
-          <p className="panel-hero-kicker">Site Universe</p>
-          <h1>Painel do jogador</h1>
-          <p>
-            Acompanhe os dados reais da sua conta, o status de verificação do e-mail e atalhos
-            informativos da área do jogador.
-          </p>
+          <p className="panel-hero-kicker">{t.panel.dashboardKicker}</p>
+          <h1>{t.panel.dashboardTitle}</h1>
+          <p>{t.panel.dashboardSubtitle}</p>
         </section>
 
         {isLoading && (
           <div className="panel-state" role="status">
-            Carregando painel...
+            {t.panel.loading}
           </div>
         )}
 

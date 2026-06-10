@@ -1,13 +1,14 @@
 import { z } from "zod";
 
+// GF-compatible: only lowercase letters a-z and digits 0-9, min 10 chars
 const passwordSchema = z
   .string()
-  .min(8)
-  .max(64)
-  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-  .regex(/[0-9]/, "Password must contain at least one number")
-  .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
+  .min(10, "A senha deve ter no mínimo 10 caracteres.")
+  .max(64, "A senha deve ter no máximo 64 caracteres.")
+  .regex(
+    /^[a-z0-9]+$/,
+    "A senha deve usar apenas letras minúsculas e números."
+  );
 
 export const registerSchema = z.object({
   name: z.string().trim().min(2).max(60),
@@ -17,7 +18,7 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   email: z.string().trim().email(),
-  password: z.string().min(1).max(64)
+  password: z.string().min(1).max(128)
 });
 
 export const emailOnlySchema = z.object({

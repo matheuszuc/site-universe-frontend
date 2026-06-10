@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PublicLayout from '../components/layout/PublicLayout'
 import { useAuth } from '../contexts/AuthContext'
+import { useTranslation } from '../i18n'
 import { gameClasses } from '../data/classes'
 import { clientDownloadUrl } from '../data/siteLinks'
 
 export default function Home() {
   const { isAuthenticated, isLoading, user } = useAuth()
+  const { t } = useTranslation()
   const [active, setActive] = useState(0)
   const total = gameClasses.length
 
@@ -43,21 +45,21 @@ export default function Home() {
               </div>
 
               <div className="content">
-                <p className="product-tag">Classe em destaque</p>
+                <p className="product-tag">{t.home.featuredClass}</p>
                 <h1>{gameClass.name}</h1>
                 <p className="description">{gameClass.description}</p>
                 <div className="home-actions">
                   {!isLoading && isAuthenticated ? (
                     <Link className="home-action-button primary" to="/painel">
-                      {user?.name ? `Painel de ${user.name}` : 'Ir para o painel'}
+                      {user?.name ? `${t.home.panelPrefix} ${user.name}` : t.home.panelFallback}
                     </Link>
                   ) : (
                     <>
                       <Link className="home-action-button primary" to="/register">
-                        Criar conta
+                        {t.home.createAccount}
                       </Link>
                       <Link className="home-action-button secondary" to="/login">
-                        Entrar
+                        {t.home.signIn}
                       </Link>
                     </>
                   )}
@@ -67,7 +69,7 @@ export default function Home() {
                     rel="noopener noreferrer"
                     target="_blank"
                   >
-                    Download
+                    {t.home.download}
                   </a>
                 </div>
               </div>
@@ -76,11 +78,11 @@ export default function Home() {
         </section>
 
         <div className="arrows">
-          <button className="arrow-btn" type="button" aria-label="Classe anterior" onClick={() => updateSlide(-1)}>
+          <button className="arrow-btn" type="button" aria-label={t.home.prevClass} onClick={() => updateSlide(-1)}>
             <i className="bx bx-left-arrow-alt" />
           </button>
 
-          <button className="arrow-btn" type="button" aria-label="Próxima classe" onClick={() => updateSlide(1)}>
+          <button className="arrow-btn" type="button" aria-label={t.home.nextClass} onClick={() => updateSlide(1)}>
             <i className="bx bx-right-arrow-alt" />
           </button>
         </div>

@@ -12,36 +12,39 @@ import {
   getAccountMigrationStatus,
   startAccountMigration,
 } from '../features/account-migration/services/accountMigrationApi'
+import { useTranslation } from '../i18n'
 import { ApiError, getApiErrorMessage } from '../services/api'
 
 type Step = 'credentials' | 'complete' | 'done'
 
 const gameLoginPattern = /^[A-Za-z0-9]+$/
 
-const passwordRules = [
-  {
-    label: 'Mínimo 8 caracteres',
-    test: (value: string) => value.length >= 8,
-  },
-  {
-    label: 'Letra maiúscula',
-    test: (value: string) => /[A-Z]/.test(value),
-  },
-  {
-    label: 'Letra minúscula',
-    test: (value: string) => /[a-z]/.test(value),
-  },
-  {
-    label: 'Número',
-    test: (value: string) => /\d/.test(value),
-  },
-  {
-    label: 'Caractere especial',
-    test: (value: string) => /[^A-Za-z0-9]/.test(value),
-  },
-]
+// GF-compatible: only lowercase a-z and digits 0-9, min 10 chars
+const GF_PASSWORD_REGEX = /^[a-z0-9]{10,64}$/
+
+function getPasswordRules(t: ReturnType<typeof useTranslation>['t']) {
+  return [
+    {
+      label: t.migration.passwordRuleMin,
+      test: (value: string) => value.length >= 10,
+    },
+    {
+      label: t.migration.passwordRuleLower,
+      test: (value: string) => /^[a-z0-9]*$/.test(value) && /[a-z]/.test(value),
+    },
+    {
+      label: t.migration.passwordRuleDigits,
+      test: (value: string) => /\d/.test(value),
+    },
+    {
+      label: t.migration.passwordRuleNoSequence,
+      test: (value: string) => GF_PASSWORD_REGEX.test(value),
+    },
+  ]
+}
 
 export default function UpdateLegacyAccount() {
+  const { t } = useTranslation()
   const [step, setStep] = useState<Step>('credentials')
   const [gameLogin, setGameLogin] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
@@ -52,9 +55,10 @@ export default function UpdateLegacyAccount() {
   const [successMessage, setSuccessMessage] = useState<string>()
   const [isLoading, setIsLoading] = useState(false)
   const [isCheckingStatus, setIsCheckingStatus] = useState(true)
+  const passwordRules = useMemo(() => getPasswordRules(t), [t])
   const passwordChecks = useMemo(
     () => passwordRules.map((rule) => ({ ...rule, valid: rule.test(newPassword) })),
-    [newPassword],
+    [newPassword, passwordRules],
   )
   const passwordIsStrong = passwordChecks.every((rule) => rule.valid)
   const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword
@@ -100,7 +104,7 @@ export default function UpdateLegacyAccount() {
     const normalizedGameLogin = gameLogin.trim()
 
     if (!gameLoginPattern.test(normalizedGameLogin)) {
-      setErrorMessage('Use apenas letras e números no usuário do jogo.')
+      setErrorMessage(t.migration.gameLoginInvalid)
       return
     }
 
@@ -116,9 +120,9 @@ export default function UpdateLegacyAccount() {
       setStep('complete')
     } catch (error) {
       if (error instanceof ApiError && error.code === 'INVALID_CREDENTIALS') {
-        setErrorMessage('Usuário ou senha inválidos.')
+        setErrorMessage(t.migration.invalidCredentials)
       } else if (error instanceof ApiError && error.code === 'ACCOUNT_ALREADY_MIGRATED') {
-        setErrorMessage('Esta conta já foi atualizada. Acesse o site normalmente ou use a recuperação de senha.')
+        setErrorMessage(t.migration.alreadyMigrated)
       } else {
         setErrorMessage(getApiErrorMessage(error))
       }
@@ -132,8 +136,13 @@ export default function UpdateLegacyAccount() {
     setErrorMessage(undefined)
     setSuccessMessage(undefined)
 
-    if (!passwordIsStrong || !passwordsMatch) {
-      setErrorMessage('Revise os requisitos da nova senha antes de continuar.')
+    if (!passwordIsStrong) {
+      setErrorMessage(t.migration.weakPassword)
+      return
+    }
+
+    if (!passwordsMatch) {
+      setErrorMessage(t.migration.passwordsNotMatch)
       return
     }
 
@@ -162,15 +171,15 @@ export default function UpdateLegacyAccount() {
         <AuthCard>
           {isCheckingStatus ? (
             <div className="panel-state" role="status">
-              Carregando...
+              {t.migration.loading}
             </div>
           ) : (
             <>
               {step === 'credentials' && (
                 <>
                   <AuthHeader
-                    title="Atualizar conta antiga"
-                    subtitle="Use seu login e senha atuais do jogo para atualizar sua conta e adicionar um e-mail."
+                    title={t.migration.title}
+                    subtitle={t.migration.subtitle}
                   />
 
                   <form className="space-y-4" onSubmit={handleStart} noValidate>
@@ -178,7 +187,7 @@ export default function UpdateLegacyAccount() {
 
                     <div>
                       <label className="auth-label" htmlFor="gameLogin">
-                        Usuário do jogo
+                        {t.migration.gameLoginLabel}
                       </label>
                       <Input
                         autoComplete="username"
@@ -187,37 +196,37 @@ export default function UpdateLegacyAccount() {
                         maxLength={60}
                         onChange={(event) => setGameLogin(event.target.value)}
                         pattern="[A-Za-z0-9]+"
-                        placeholder="usuario123"
+                        placeholder={t.migration.gameLoginPlaceholder}
                         value={gameLogin}
                       />
                     </div>
 
                     <div>
                       <label className="auth-label" htmlFor="currentPassword">
-                        Senha atual
+                        {t.migration.currentPasswordLabel}
                       </label>
                       <PasswordInput
                         autoComplete="current-password"
                         id="currentPassword"
                         maxLength={128}
                         onChange={(event) => setCurrentPassword(event.target.value)}
-                        placeholder="Senha atual do jogo"
+                        placeholder={t.migration.currentPasswordPlaceholder}
                         value={currentPassword}
                       />
                     </div>
 
                     <div className="legacy-security-note">
-                      Nunca compartilhe sua senha fora do site oficial.
+                      {t.migration.securityNote}
                     </div>
 
                     <LoadingButton
                       className="w-full"
                       disabled={!gameLogin.trim() || !currentPassword}
                       isLoading={isLoading}
-                      loadingText="Validando..."
+                      loadingText={t.migration.submitting}
                       type="submit"
                     >
-                      Continuar
+                      {t.migration.submit}
                     </LoadingButton>
                   </form>
                 </>
@@ -226,26 +235,26 @@ export default function UpdateLegacyAccount() {
               {step === 'complete' && (
                 <>
                   <AuthHeader
-                    title="Finalizar atualização da conta"
-                    subtitle="Adicione um e-mail e defina uma senha segura para sua conta no Site Universe."
+                    title={t.migration.step2Title}
+                    subtitle={t.migration.step2Subtitle}
                   />
 
                   <form className="space-y-4" onSubmit={handleComplete} noValidate>
                     {errorMessage && <Alert tone="error">{errorMessage}</Alert>}
 
                     <div className="legacy-account-found">
-                      Conta encontrada: <strong>{gameLogin}</strong>
+                      {t.migration.accountFound} <strong>{gameLogin}</strong>
                     </div>
 
                     <div>
                       <label className="auth-label" htmlFor="migrationEmail">
-                        E-mail
+                        {t.migration.emailLabel}
                       </label>
                       <Input
                         autoComplete="email"
                         id="migrationEmail"
                         onChange={(event) => setEmail(event.target.value)}
-                        placeholder="seuemail@exemplo.com"
+                        placeholder={t.migration.emailPlaceholder}
                         type="email"
                         value={email}
                       />
@@ -253,19 +262,19 @@ export default function UpdateLegacyAccount() {
 
                     <div>
                       <label className="auth-label" htmlFor="newPassword">
-                        Nova senha
+                        {t.migration.newPasswordLabel}
                       </label>
                       <PasswordInput
                         autoComplete="new-password"
                         id="newPassword"
                         maxLength={64}
                         onChange={(event) => setNewPassword(event.target.value)}
-                        placeholder="Senha segura"
+                        placeholder={t.migration.newPasswordPlaceholder}
                         value={newPassword}
                       />
                     </div>
 
-                    <div className="password-checklist" aria-label="Requisitos da senha">
+                    <div className="password-checklist" aria-label={t.migration.passwordRequirementsTitle}>
                       {passwordChecks.map((rule) => (
                         <span className={rule.valid ? 'valid' : ''} key={rule.label}>
                           <i className={rule.valid ? 'bx bx-check' : 'bx bx-x'} aria-hidden="true" />
@@ -275,31 +284,31 @@ export default function UpdateLegacyAccount() {
                     </div>
 
                     <div>
-                      <label className="auth-label" htmlFor="confirmPassword">
-                        Confirmar nova senha
+                      <label className="auth-label" htmlFor="confirmMigrationPassword">
+                        {t.migration.confirmPasswordLabel}
                       </label>
                       <PasswordInput
                         autoComplete="new-password"
-                        id="confirmPassword"
+                        id="confirmMigrationPassword"
                         maxLength={64}
                         onChange={(event) => setConfirmPassword(event.target.value)}
-                        placeholder="Repita a senha"
+                        placeholder={t.migration.confirmPasswordPlaceholder}
                         value={confirmPassword}
                       />
                     </div>
 
                     {confirmPassword && !passwordsMatch && (
-                      <Alert tone="error">As senhas precisam ser iguais.</Alert>
+                      <Alert tone="error">{t.migration.passwordsNotMatch}</Alert>
                     )}
 
                     <LoadingButton
                       className="w-full"
                       disabled={!email || !passwordIsStrong || !passwordsMatch}
                       isLoading={isLoading}
-                      loadingText="Atualizando..."
+                      loadingText={t.migration.finishing}
                       type="submit"
                     >
-                      Atualizar conta
+                      {t.migration.finish}
                     </LoadingButton>
                   </form>
                 </>
@@ -308,16 +317,12 @@ export default function UpdateLegacyAccount() {
               {step === 'done' && (
                 <>
                   <AuthHeader
-                    title="Conta em atualização"
-                    subtitle="Enviamos um link de verificação para seu e-mail."
+                    title={t.migration.doneTitle}
+                    subtitle={t.migration.doneSubtitle}
                   />
                   {successMessage && <Alert tone="success">{successMessage}</Alert>}
-                  <p className="mt-4 text-sm leading-relaxed text-white/75">
-                    Verifique seu e-mail para concluir a ativação no Site Universe. Em ambiente de
-                    desenvolvimento, o link pode aparecer no console do backend.
-                  </p>
                   <Link className="mt-5 inline-flex font-bold text-white hover:text-cyan-100" to="/login">
-                    Ir para o login
+                    {t.migration.goToLogin}
                   </Link>
                 </>
               )}

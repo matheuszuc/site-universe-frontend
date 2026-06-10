@@ -10,9 +10,11 @@ import {
   type RewardScale,
 } from '../features/rewards/services/rewardsApi'
 import AuthenticatedLayout from '../layouts/AuthenticatedLayout'
+import { useTranslation } from '../i18n'
 import type { RewardTier } from '../data/rewardTiers'
 
 export default function UserRewardScale() {
+  const { t } = useTranslation()
   const [claimingTierCode, setClaimingTierCode] = useState<string>()
   const [errorMessage, setErrorMessage] = useState<string>()
   const [isLoading, setIsLoading] = useState(true)
@@ -36,7 +38,7 @@ export default function UserRewardScale() {
       const nextScale = await getRewardScale()
       setScale(nextScale)
     } catch {
-      setErrorMessage('Não foi possível carregar a escala de recompensas. Tente novamente.')
+      setErrorMessage(t.rewards.loadError)
     } finally {
       setIsLoading(false)
     }

@@ -11,12 +11,14 @@ import Input from '../components/ui/Input'
 import LoadingButton from '../components/ui/LoadingButton'
 import PasswordInput from '../components/ui/PasswordInput'
 import { useAuth } from '../contexts/AuthContext'
+import { useTranslation } from '../i18n'
 import { registerSchema } from '../features/auth/schemas/registerSchema'
 import type { RegisterFormValues } from '../features/auth/types/authTypes'
 import { getApiErrorMessage } from '../services/api'
 
 export default function Register() {
   const { register: registerAccount } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [errorMessage, setErrorMessage] = useState<string>()
   const {
@@ -50,8 +52,8 @@ export default function Register() {
       <main className="auth-main">
         <AuthCard>
           <AuthHeader
-            title="Registro Universe"
-            subtitle="Crie sua conta para começar sua jornada no Site Universe."
+            title={t.register.title}
+            subtitle={t.register.subtitle}
           />
 
           <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -59,13 +61,13 @@ export default function Register() {
 
             <div>
               <label className="auth-label" htmlFor="username">
-                Nome de usuário
+                {t.register.usernameLabel}
               </label>
               <Input
                 autoComplete="username"
                 error={errors.username?.message}
                 id="username"
-                placeholder="UniversePlayer"
+                placeholder={t.register.usernamePlaceholder}
                 {...register('username')}
               />
               <FormError id="username-error" message={errors.username?.message} />
@@ -73,13 +75,13 @@ export default function Register() {
 
             <div>
               <label className="auth-label" htmlFor="email">
-                E-mail
+                {t.auth.email}
               </label>
               <Input
                 autoComplete="email"
                 error={errors.email?.message}
                 id="email"
-                placeholder="seuemail@exemplo.com"
+                placeholder={t.auth.emailPlaceholder}
                 type="email"
                 {...register('email')}
               />
@@ -88,13 +90,13 @@ export default function Register() {
 
             <div>
               <label className="auth-label" htmlFor="password">
-                Senha
+                {t.auth.password}
               </label>
               <PasswordInput
                 autoComplete="new-password"
                 error={errors.password?.message}
                 id="password"
-                placeholder="Senha segura"
+                placeholder={t.auth.passwordPlaceholder}
                 {...register('password')}
               />
               <FormError id="password-error" message={errors.password?.message} />
@@ -102,13 +104,13 @@ export default function Register() {
 
             <div>
               <label className="auth-label" htmlFor="confirmPassword">
-                Confirmar senha
+                {t.register.confirmPasswordLabel}
               </label>
               <PasswordInput
                 autoComplete="new-password"
                 error={errors.confirmPassword?.message}
                 id="confirmPassword"
-                placeholder="Repita a senha"
+                placeholder={t.register.confirmPasswordPlaceholder}
                 {...register('confirmPassword')}
               />
               <FormError id="confirmPassword-error" message={errors.confirmPassword?.message} />
@@ -125,14 +127,14 @@ export default function Register() {
                 />
                 <p className="m-0" id="terms-description">
                   <label className="cursor-pointer" htmlFor="terms">
-                    Li e aceito os
+                    {t.register.terms1}
                   </label>{' '}
                   <Link className="font-bold text-white underline decoration-cyan-200/70 underline-offset-4 hover:text-cyan-100" to="/terms">
-                    Termos de Uso
+                    {t.register.termsLink}
                   </Link>{' '}
-                  e a{' '}
+                  {t.register.terms2}{' '}
                   <Link className="font-bold text-white underline decoration-cyan-200/70 underline-offset-4 hover:text-cyan-100" to="/privacy">
-                    Política de Privacidade
+                    {t.register.privacyLink}
                   </Link>
                   .
                 </p>
@@ -140,14 +142,14 @@ export default function Register() {
               <FormError message={errors.terms?.message} />
             </div>
 
-            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText="Criando conta..." type="submit">
-              Registrar
+            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText={t.register.submitting} type="submit">
+              {t.register.submit}
             </LoadingButton>
 
             <p className="text-center text-sm text-white/75">
-              Já tem uma conta?{' '}
+              {t.register.hasAccount}{' '}
               <Link className="font-bold text-white hover:text-cyan-100" to="/login">
-                Entrar
+                {t.register.signIn}
               </Link>
             </p>
           </form>

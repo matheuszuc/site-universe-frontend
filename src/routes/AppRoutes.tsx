@@ -14,6 +14,7 @@ import UserDashboard from '../pages/UserDashboard'
 import UserRewardScale from '../pages/UserRewardScale'
 import UserStore from '../pages/UserStore'
 import VerifyEmail from '../pages/VerifyEmail'
+import AdminRoute from './AdminRoute'
 import ProtectedRoute from './ProtectedRoute'
 
 export default function AppRoutes() {
@@ -33,9 +34,9 @@ export default function AppRoutes() {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute>
+          <AdminRoute>
             <AdminDashboard />
-          </ProtectedRoute>
+          </AdminRoute>
         }
       />
       <Route

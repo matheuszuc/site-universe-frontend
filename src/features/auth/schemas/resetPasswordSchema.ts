@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import { formMessages } from '../../../utils/formMessages'
 
-const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\sA-Za-z0-9])\S{8,64}$/
+// GF-compatible: only lowercase letters a-z and digits 0-9, min 10 chars
+const passwordRegex = /^[a-z0-9]{10,64}$/
 
 export const resetPasswordSchema = z
   .object({
