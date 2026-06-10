@@ -3,12 +3,12 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTranslation } from '../i18n'
 
-type ProtectedRouteProps = {
+type AdminRouteProps = {
   children: ReactNode
 }
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth()
+export default function AdminRoute({ children }: AdminRouteProps) {
+  const { isAuthenticated, isLoading, user } = useAuth()
   const { t } = useTranslation()
   const location = useLocation()
 
@@ -26,6 +26,10 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     return <Navigate replace state={{ from: location }} to="/login" />
+  }
+
+  if (user?.role !== 'ADMIN') {
+    return <Navigate replace to="/painel" />
   }
 
   return children

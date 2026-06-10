@@ -2,25 +2,28 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useTranslation } from '../i18n'
 import { supportDiscordUrl } from '../data/siteLinks'
 import { getApiErrorMessage } from '../services/api'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 type AuthenticatedLayoutProps = {
   children: ReactNode
 }
 
-const navItems = [
-  { label: 'Painel', to: '/painel', icon: 'bx-grid-alt' },
-  { label: 'Loja', to: '/painel/loja', icon: 'bx-store' },
-  { label: 'Recompensas', to: '/painel/recompensas', icon: 'bx-gift' },
-  { label: 'Suporte', href: supportDiscordUrl, icon: 'bx-support', external: true },
-]
-
 export default function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   const { logout } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [errorMessage, setErrorMessage] = useState<string>()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const navItems = [
+    { label: t.panel.nav.panel, to: '/painel', icon: 'bx-grid-alt' },
+    { label: t.panel.nav.store, to: '/painel/loja', icon: 'bx-store' },
+    { label: t.panel.nav.rewards, to: '/painel/recompensas', icon: 'bx-gift' },
+    { label: t.panel.nav.support, href: supportDiscordUrl, icon: 'bx-support', external: true },
+  ]
 
   async function handleLogout() {
     setIsLoggingOut(true)
@@ -38,7 +41,7 @@ export default function AuthenticatedLayout({ children }: AuthenticatedLayoutPro
 
   return (
     <div className="panel-shell">
-      <aside className="panel-sidebar" aria-label="Menu da área logada">
+      <aside className="panel-sidebar" aria-label={t.panel.menuLabel}>
         <Link className="panel-brand" to="/painel">
           <span>GF</span>
           <strong>Universe</strong>
@@ -68,24 +71,27 @@ export default function AuthenticatedLayout({ children }: AuthenticatedLayoutPro
 
         <Link className="panel-home-link" to="/">
           <i className="bx bx-left-arrow-alt" aria-hidden="true" />
-          Home
+          {t.panel.homeLink}
         </Link>
       </aside>
 
       <div className="panel-content-shell">
         <header className="panel-topbar">
           <div>
-            <p className="text-xs font-black uppercase text-cyan-100">Área do jogador</p>
-            <strong className="text-lg text-white">Painel do Usuário</strong>
+            <p className="text-xs font-black uppercase text-cyan-100">{t.panel.playerArea}</p>
+            <strong className="text-lg text-white">{t.panel.userPanel}</strong>
           </div>
-          <button
-            className="panel-topbar-link"
-            disabled={isLoggingOut}
-            onClick={handleLogout}
-            type="button"
-          >
-            {isLoggingOut ? 'Saindo...' : 'Sair'}
-          </button>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <button
+              className="panel-topbar-link"
+              disabled={isLoggingOut}
+              onClick={handleLogout}
+              type="button"
+            >
+              {isLoggingOut ? t.panel.loggingOut : t.panel.logout}
+            </button>
+          </div>
         </header>
 
         {errorMessage && (

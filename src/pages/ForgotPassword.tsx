@@ -12,9 +12,11 @@ import LoadingButton from '../components/ui/LoadingButton'
 import { forgotPasswordSchema } from '../features/auth/schemas/forgotPasswordSchema'
 import { authApi } from '../features/auth/services/authApi'
 import type { ForgotPasswordFormValues } from '../features/auth/types/authTypes'
+import { useTranslation } from '../i18n'
 import { getApiErrorMessage } from '../services/api'
 
 export default function ForgotPassword() {
+  const { t } = useTranslation()
   const [message, setMessage] = useState<string>()
   const [errorMessage, setErrorMessage] = useState<string>()
   const {
@@ -45,8 +47,8 @@ export default function ForgotPassword() {
       <main className="auth-main">
         <AuthCard>
           <AuthHeader
-            title="Recuperar senha"
-            subtitle="Informe seu e-mail para receber instruções de recuperação."
+            title={t.forgotPassword.title}
+            subtitle={t.forgotPassword.subtitle}
           />
 
           <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -55,27 +57,27 @@ export default function ForgotPassword() {
 
             <div>
               <label className="auth-label" htmlFor="email">
-                E-mail
+                {t.auth.email}
               </label>
               <Input
                 autoComplete="email"
                 error={errors.email?.message}
                 id="email"
-                placeholder="seuemail@exemplo.com"
+                placeholder={t.auth.emailPlaceholder}
                 type="email"
                 {...register('email')}
               />
               <FormError id="email-error" message={errors.email?.message} />
             </div>
 
-            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText="Enviando..." type="submit">
-              Enviar instruções
+            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText={t.forgotPassword.submitting} type="submit">
+              {t.forgotPassword.submit}
             </LoadingButton>
 
             <p className="text-center text-sm text-white/75">
-              Lembrou a senha?{' '}
+              {t.forgotPassword.rememberPassword}{' '}
               <Link className="font-bold text-white hover:text-cyan-100" to="/login">
-                Voltar ao login
+                {t.forgotPassword.backToLogin}
               </Link>
             </p>
           </form>

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
+import { useAuth } from '../contexts/AuthContext'
+import { useTranslation } from '../i18n'
 import { formatApAmount, formatCurrencyFromCents } from '../data/storePackages'
 import {
   createPendingOrder,
@@ -11,8 +13,10 @@ import {
   type StorePackage,
   type UserOrderSummary,
 } from '../features/store/services/storeApi'
+import { authApi } from '../features/auth/services/authApi'
 import StorePackageCard from '../features/user-panel/components/StorePackageCard'
 import AuthenticatedLayout from '../layouts/AuthenticatedLayout'
+import { ApiError, getApiErrorMessage } from '../services/api'
 
 type CreatedOrderDetails = {
   order: CreateOrderResponse
@@ -25,6 +29,7 @@ type PendingOrderModalProps = {
 }
 
 function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
+  const { t } = useTranslation()
   const { order, storePackage } = details
   const [copyMessage, setCopyMessage] = useState<string>()
   const [isSimulatingPayment, setIsSimulatingPayment] = useState(false)
@@ -35,17 +40,16 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
   const amount = formatCurrencyFromCents(order.order.amountCents, order.order.currency)
   const currentStatus = statusOrder?.status ?? order.order.status
   const isPaid = currentStatus === 'paid' || currentStatus === 'fulfilled'
-  const statusLabel = isPaid ? 'Pago' : 'Aguardando pagamento Pix'
+  const statusLabel = isPaid ? t.store.orderPaid : t.store.orderWaiting
   const pixUnavailable = order.pix.unavailableReason && !order.pix.pixCopiaECola && !order.pix.qrCodeImage
   const canSimulateApprovedPayment = import.meta.env.DEV && !isPaid
 
   const pixDescription = useMemo(() => {
     if (isPaid) {
-      return 'Pagamento confirmado. O saldo AP será atualizado pelo servidor.'
+      return t.store.paidDescription
     }
-
-    return 'O AP será creditado somente após confirmação real do pagamento Pix.'
-  }, [isPaid])
+    return t.store.pixWaiting
+  }, [isPaid, t.store.paidDescription, t.store.pixWaiting])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -71,7 +75,7 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
     }
 
     await navigator.clipboard.writeText(order.pix.pixCopiaECola)
-    setCopyMessage('Código Pix copiado.')
+    setCopyMessage(t.store.pixCopied)
   }
 
   async function refreshOrderStatus() {
@@ -98,7 +102,7 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
       )
       setSimulationMessage(result.message)
     } catch {
-      setStatusError('Nao foi possivel simular o pagamento agora.')
+      setStatusError(t.store.simulateError)
     } finally {
       setIsSimulatingPayment(false)
     }
@@ -113,7 +117,7 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
         role="dialog"
       >
         <button
-          aria-label="Fechar confirmação do pedido"
+          aria-label={t.store.closeOrder}
           className="panel-modal-close"
           onClick={onClose}
           type="button"
@@ -121,25 +125,25 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
           <i className="bx bx-x" aria-hidden="true" />
         </button>
 
-        <p className="panel-card-kicker">Pedido criado</p>
+        <p className="panel-card-kicker">{t.store.orderCreated}</p>
         <h2 id="pending-order-modal-title">{statusLabel}</h2>
-        <p>Pedido {order.order.orderNumber} criado com sucesso.</p>
+        <p>{t.store.orderCreated} {order.order.orderNumber} {t.store.orderCreatedNote}</p>
 
         <div className="store-order-summary" aria-label="Resumo do pedido pendente">
           <div>
-            <span>Pacote</span>
+            <span>{t.store.packageLabel}</span>
             <strong>{order.order.packageName || storePackage.name}</strong>
           </div>
           <div>
-            <span>AP</span>
-            <strong>{formatApAmount(apAmount)} AP</strong>
+            <span>{t.store.unicoinLabel}</span>
+            <strong>{formatApAmount(apAmount)} Unicoin</strong>
           </div>
           <div>
-            <span>Valor</span>
+            <span>{t.store.valueLabel}</span>
             <strong>{amount}</strong>
           </div>
           <div>
-            <span>Status</span>
+            <span>{t.store.statusLabel}</span>
             <strong>{statusLabel}</strong>
           </div>
         </div>
@@ -152,7 +156,7 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
 
         {order.pix.pixCopiaECola && (
           <div className="store-pix-copy">
-            <span>Pix copia e cola</span>
+            <span>{t.store.pixCopiaECola}</span>
             <textarea readOnly value={order.pix.pixCopiaECola} />
           </div>
         )}
@@ -169,7 +173,7 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
           {order.pix.pixCopiaECola && (
             <Button onClick={handleCopyPixCode} variant="secondary">
               <i className="bx bx-copy text-xl" aria-hidden="true" />
-              Copiar código Pix
+              {t.store.copyPix}
             </Button>
           )}
           {canSimulateApprovedPayment && (
@@ -179,11 +183,11 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
               variant="secondary"
             >
               <i className="bx bx-check-circle text-xl" aria-hidden="true" />
-              {isSimulatingPayment ? 'Simulando...' : 'Simular pagamento aprovado'}
+              {isSimulatingPayment ? t.store.simulating : t.store.simulatePayment}
             </Button>
           )}
           <Button onClick={onClose} variant="primary">
-            Entendi
+            {t.store.confirm}
           </Button>
         </div>
       </div>
@@ -192,11 +196,17 @@ function PendingOrderModal({ details, onClose }: PendingOrderModalProps) {
 }
 
 export default function UserStore() {
+  const { user } = useAuth()
+  const { t } = useTranslation()
   const [packages, setPackages] = useState<StorePackage[]>([])
   const [createdOrderDetails, setCreatedOrderDetails] = useState<CreatedOrderDetails | null>(null)
   const [creatingPackageCode, setCreatingPackageCode] = useState<string>()
   const [errorMessage, setErrorMessage] = useState<string>()
   const [isLoading, setIsLoading] = useState(true)
+  const [isResendingVerification, setIsResendingVerification] = useState(false)
+  const [resendMessage, setResendMessage] = useState<string>()
+
+  const emailNotVerified = user !== null && user.emailVerified === false
 
   async function loadPackages() {
     setErrorMessage(undefined)
@@ -206,7 +216,7 @@ export default function UserStore() {
       const nextPackages = await listStorePackages()
       setPackages(nextPackages)
     } catch {
-      setErrorMessage('Não foi possível carregar os pacotes de AP. Tente novamente.')
+      setErrorMessage(t.store.loadError)
     } finally {
       setIsLoading(false)
     }
@@ -216,7 +226,26 @@ export default function UserStore() {
     loadPackages()
   }, [])
 
+  async function handleResendVerification() {
+    if (!user?.email) return
+    setIsResendingVerification(true)
+    setResendMessage(undefined)
+
+    try {
+      const result = await authApi.resendVerification(user.email)
+      setResendMessage(result.message)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setResendMessage(getApiErrorMessage(error))
+      }
+    } finally {
+      setIsResendingVerification(false)
+    }
+  }
+
   async function handleCreateOrder(storePackage: StorePackage) {
+    if (emailNotVerified) return
+
     setCreatedOrderDetails(null)
     setErrorMessage(undefined)
     setCreatingPackageCode(storePackage.code)
@@ -224,8 +253,12 @@ export default function UserStore() {
     try {
       const order = await createPendingOrder(storePackage.code)
       setCreatedOrderDetails({ order, storePackage })
-    } catch {
-      setErrorMessage('Não foi possível criar o pedido Pix. Tente novamente.')
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'EMAIL_NOT_VERIFIED') {
+        setErrorMessage(t.store.emailNotVerified)
+      } else {
+        setErrorMessage(t.store.createError)
+      }
     } finally {
       setCreatingPackageCode(undefined)
     }
@@ -235,13 +268,32 @@ export default function UserStore() {
     <AuthenticatedLayout>
       <main className="panel-main">
         <section className="panel-hero">
-          <p className="panel-hero-kicker">Loja de AP</p>
-          <h1>Pacotes para evoluir</h1>
-          <p>
-            Escolha um pacote de AP. O pedido é criado com segurança e o pagamento é feito somente
-            via Pix.
-          </p>
+          <p className="panel-hero-kicker">{t.store.kicker}</p>
+          <h1>{t.store.title}</h1>
+          <p>{t.store.subtitle}</p>
         </section>
+
+        {emailNotVerified && (
+          <div className="mb-5">
+            <Alert tone="error">
+              <span>{t.store.emailNotVerified}</span>
+              {' '}
+              <button
+                className="underline font-semibold hover:opacity-80 ml-2"
+                disabled={isResendingVerification}
+                onClick={handleResendVerification}
+                type="button"
+              >
+                {isResendingVerification ? '...' : t.store.resendVerification}
+              </button>
+            </Alert>
+            {resendMessage && (
+              <div className="mt-2">
+                <Alert tone="success">{resendMessage}</Alert>
+              </div>
+            )}
+          </div>
+        )}
 
         {errorMessage && (
           <div className="mb-5">
@@ -251,12 +303,13 @@ export default function UserStore() {
 
         {isLoading ? (
           <div className="panel-state" role="status">
-            Carregando pacotes...
+            {t.store.loading}
           </div>
         ) : packages.length > 0 ? (
-          <section className="store-grid" aria-label="Pacotes de AP">
+          <section className="store-grid" aria-label={t.store.kicker}>
             {packages.map((storePackage) => (
               <StorePackageCard
+                disabled={emailNotVerified}
                 isCreating={creatingPackageCode === storePackage.code}
                 key={storePackage.code}
                 onSelect={handleCreateOrder}
@@ -266,13 +319,13 @@ export default function UserStore() {
           </section>
         ) : (
           <div className="panel-state">
-            Nenhum pacote disponível no momento.
+            {t.store.noPackages}
           </div>
         )}
 
         {!isLoading && errorMessage && (
           <Button className="mt-5" onClick={loadPackages} variant="secondary">
-            Tentar novamente
+            {t.store.retry}
           </Button>
         )}
 

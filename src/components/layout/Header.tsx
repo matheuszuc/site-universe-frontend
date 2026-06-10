@@ -1,14 +1,17 @@
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { useTranslation } from '../../i18n'
 import { supportDiscordUrl } from '../../data/siteLinks'
+import LanguageSwitcher from '../LanguageSwitcher'
 
-const navItems = [
-  { label: 'Home', to: '/' },
-  { label: 'Download', to: '/download' },
+const publicNavItems = (t: ReturnType<typeof useTranslation>['t']) => [
+  { label: t.nav.home, to: '/' },
+  { label: t.nav.download, to: '/download' },
 ]
 
 export default function Header() {
   const { isAuthenticated, isLoading, user } = useAuth()
+  const { t } = useTranslation()
   const showGuestLinks = !isLoading && !isAuthenticated
 
   return (
@@ -19,7 +22,7 @@ export default function Header() {
 
       <nav aria-label="Menu principal">
         <ul>
-          {navItems.map((item) => (
+          {publicNavItems(t).map((item) => (
             <li key={item.label}>
               <NavLink to={item.to}>{item.label}</NavLink>
             </li>
@@ -27,24 +30,27 @@ export default function Header() {
           {showGuestLinks && (
             <>
               <li>
-                <NavLink to="/login">Login</NavLink>
+                <NavLink to="/login">{t.nav.login}</NavLink>
               </li>
               <li>
-                <NavLink to="/register">Registro</NavLink>
+                <NavLink to="/register">{t.nav.register}</NavLink>
               </li>
             </>
           )}
           {!isLoading && isAuthenticated && (
             <li>
               <NavLink className="header-user-link" to="/painel">
-                {user?.name || 'Painel'}
+                {user?.name || t.nav.dashboard}
               </NavLink>
             </li>
           )}
           <li>
             <a href={supportDiscordUrl} target="_blank" rel="noopener noreferrer">
-              Discord
+              {t.nav.discord}
             </a>
+          </li>
+          <li>
+            <LanguageSwitcher />
           </li>
         </ul>
       </nav>

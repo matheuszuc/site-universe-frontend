@@ -7,6 +7,7 @@ import Alert from '../components/ui/Alert'
 import LoadingButton from '../components/ui/LoadingButton'
 import { authApi } from '../features/auth/services/authApi'
 import type { AuthApiResult } from '../features/auth/types/authTypes'
+import { useTranslation } from '../i18n'
 import { getApiErrorMessage } from '../services/api'
 
 type VerifyEmailState = {
@@ -19,6 +20,7 @@ type VerificationStatus = 'idle' | 'loading' | 'success' | 'error'
 const verificationRequestsByToken = new Map<string, Promise<AuthApiResult>>()
 
 export default function VerifyEmail() {
+  const { t } = useTranslation()
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const { email } = (location.state ?? {}) as VerifyEmailState
@@ -41,7 +43,7 @@ export default function VerifyEmail() {
 
     if (!token) {
       setVerificationStatus('idle')
-      setMessage('Enviamos um código de confirmação para seu e-mail. Confirme para liberar sua conta.')
+      setMessage(t.verifyEmail.codeSent)
       return
     }
 
@@ -62,7 +64,7 @@ export default function VerifyEmail() {
         }
 
         setVerificationStatus('success')
-        setMessage('E-mail verificado com sucesso.')
+        setMessage(t.verifyEmail.emailSuccess)
       })
       .catch(() => {
         if (!isCurrentEffect || activeTokenRef.current !== token) {
@@ -70,7 +72,7 @@ export default function VerifyEmail() {
         }
 
         setVerificationStatus('error')
-        setErrorMessage('Token inválido ou expirado.')
+        setErrorMessage(t.verifyEmail.tokenInvalid)
       })
       .finally(() => {
         if (verificationRequestsByToken.get(token) === verificationRequest) {
@@ -81,7 +83,7 @@ export default function VerifyEmail() {
     return () => {
       isCurrentEffect = false
     }
-  }, [token])
+  }, [token, t.verifyEmail.codeSent, t.verifyEmail.emailSuccess, t.verifyEmail.tokenInvalid])
 
   useEffect(() => {
     if (cooldown <= 0) return undefined
@@ -95,7 +97,7 @@ export default function VerifyEmail() {
 
   async function handleResend() {
     if (!email) {
-      setErrorMessage('Informe o e-mail para reenviar a verificação.')
+      setErrorMessage(t.verifyEmail.noEmail)
       return
     }
 
@@ -118,12 +120,12 @@ export default function VerifyEmail() {
     event.preventDefault()
 
     if (!email) {
-      setErrorMessage('Informe o e-mail para confirmar o código.')
+      setErrorMessage(t.verifyEmail.noEmailCode)
       return
     }
 
     if (!/^\d{6,8}$/.test(code.trim())) {
-      setErrorMessage('Informe o código de confirmação recebido por e-mail.')
+      setErrorMessage(t.verifyEmail.codeInvalid)
       return
     }
 
@@ -148,12 +150,12 @@ export default function VerifyEmail() {
       <main className="auth-main">
         <AuthCard>
           <AuthHeader
-            title="Verifique seu e-mail"
-            subtitle="Use o link de verificação enviado para concluir sua conta."
+            title={t.verifyEmail.title}
+            subtitle={t.verifyEmail.subtitle}
           />
 
           <div className="space-y-5">
-            {verificationStatus === 'loading' && <Alert>Validando token de verificação...</Alert>}
+            {verificationStatus === 'loading' && <Alert>{t.verifyEmail.loading}</Alert>}
 
             {message && <Alert tone="success">{message}</Alert>}
             {errorMessage && <Alert tone="error">{errorMessage}</Alert>}
@@ -162,7 +164,7 @@ export default function VerifyEmail() {
               <form className="space-y-3" onSubmit={handleConfirmCode}>
                 <div>
                   <label className="auth-label" htmlFor="verification-code">
-                    Código de confirmação
+                    {t.verifyEmail.codeLabel}
                   </label>
                   <input
                     autoComplete="one-time-code"
@@ -172,7 +174,7 @@ export default function VerifyEmail() {
                     inputMode="numeric"
                     maxLength={8}
                     onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 8))}
-                    placeholder="000000"
+                    placeholder={t.verifyEmail.codePlaceholder}
                     value={code}
                   />
                 </div>
@@ -181,28 +183,28 @@ export default function VerifyEmail() {
                   className="w-full"
                   disabled={!email || isConfirmingCode}
                   isLoading={isConfirmingCode}
-                  loadingText="Confirmando..."
+                  loadingText={t.verifyEmail.submitting}
                   type="submit"
                 >
-                  Confirmar e-mail
+                  {t.verifyEmail.submit}
                 </LoadingButton>
               </form>
             )}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Link className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-white/60 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/20" to="/login">
-                Voltar ao login
+                {t.verifyEmail.backToLogin}
               </Link>
               {verificationStatus !== 'success' && (
                 <LoadingButton
                   className="w-full"
                   disabled={cooldown > 0 || !email}
                   isLoading={isSending}
-                  loadingText="Reenviando..."
+                  loadingText={t.verifyEmail.resending}
                   onClick={handleResend}
                   type="button"
                 >
-                  {cooldown > 0 ? `Reenviar em ${cooldown}s` : 'Reenviar e-mail'}
+                  {cooldown > 0 ? `${t.verifyEmail.resendIn} ${cooldown}s` : t.verifyEmail.resend}
                 </LoadingButton>
               )}
             </div>

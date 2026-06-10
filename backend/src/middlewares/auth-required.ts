@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import { sessionCookieName } from "../config/cookies.js";
+import { sessionsService } from "../modules/sessions/sessions.service.js";
 import { AppError } from "../utils/safe-error.js";
 
 export async function authRequired(request: FastifyRequest, _reply: FastifyReply) {
@@ -8,5 +9,11 @@ export async function authRequired(request: FastifyRequest, _reply: FastifyReply
 
   if (!sessionToken) {
     throw new AppError(401, "UNAUTHORIZED", "Não autorizado.");
+  }
+
+  const session = await sessionsService.findValidSession(sessionToken);
+
+  if (!session) {
+    throw new AppError(401, "UNAUTHORIZED", "Sessão inválida ou expirada.");
   }
 }

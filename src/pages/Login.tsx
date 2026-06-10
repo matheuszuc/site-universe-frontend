@@ -11,6 +11,7 @@ import Input from '../components/ui/Input'
 import LoadingButton from '../components/ui/LoadingButton'
 import PasswordInput from '../components/ui/PasswordInput'
 import { useAuth } from '../contexts/AuthContext'
+import { useTranslation } from '../i18n'
 import { loginSchema } from '../features/auth/schemas/loginSchema'
 import { authApi } from '../features/auth/services/authApi'
 import type { LoginFormValues } from '../features/auth/types/authTypes'
@@ -24,6 +25,7 @@ type LoginLocationState = {
 
 export default function Login() {
   const { login } = useAuth()
+  const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const [errorMessage, setErrorMessage] = useState<string>()
@@ -83,8 +85,8 @@ export default function Login() {
       <main className="auth-main">
         <AuthCard>
           <AuthHeader
-            title="Universe Login"
-            subtitle="Entre com seu e-mail e senha para acessar sua conta."
+            title={t.login.title}
+            subtitle={t.login.subtitle}
           />
 
           <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -93,13 +95,13 @@ export default function Login() {
 
             <div>
               <label className="auth-label" htmlFor="email">
-                E-mail
+                {t.auth.email}
               </label>
               <Input
                 autoComplete="email"
                 error={errors.email?.message}
                 id="email"
-                placeholder="seuemail@exemplo.com"
+                placeholder={t.auth.emailPlaceholder}
                 type="email"
                 {...register('email')}
               />
@@ -108,13 +110,13 @@ export default function Login() {
 
             <div>
               <label className="auth-label" htmlFor="password">
-                Senha
+                {t.auth.password}
               </label>
               <PasswordInput
                 autoComplete="current-password"
                 error={errors.password?.message}
                 id="password"
-                placeholder="Sua senha"
+                placeholder={t.auth.passwordPlaceholder}
                 {...register('password')}
               />
               <FormError id="password-error" message={errors.password?.message} />
@@ -122,37 +124,37 @@ export default function Login() {
 
             <div className="flex items-center justify-end text-sm">
               <Link className="font-semibold text-cyan-100 hover:text-white" to="/forgot-password">
-                Esqueci a senha
+                {t.login.forgotPassword}
               </Link>
             </div>
 
-            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText="Entrando..." type="submit">
-              Login
+            <LoadingButton className="w-full" isLoading={isSubmitting} loadingText={t.login.submitting} type="submit">
+              {t.login.submit}
             </LoadingButton>
 
             {unverifiedEmail && (
               <LoadingButton
                 className="w-full"
                 isLoading={isResendingVerification}
-                loadingText="Reenviando..."
+                loadingText={t.login.resending}
                 onClick={handleResendVerification}
                 type="button"
               >
-                Reenviar e-mail
+                {t.login.resendEmail}
               </LoadingButton>
             )}
 
             <p className="text-center text-sm text-white/75">
-              Não tem uma conta?{' '}
+              {t.login.noAccount}{' '}
               <Link className="font-bold text-white hover:text-cyan-100" to="/register">
-                Cadastre-se
+                {t.login.signUp}
               </Link>
             </p>
 
             <p className="text-center text-sm text-white/75">
-              Tem uma conta antiga?{' '}
+              {t.login.oldAccount}{' '}
               <Link className="font-bold text-white hover:text-cyan-100" to="/atualizar-conta">
-                Atualizar conta
+                {t.login.updateAccount}
               </Link>
             </p>
           </form>
