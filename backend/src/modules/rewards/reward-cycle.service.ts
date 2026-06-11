@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 
+import { env } from "../../config/env.js";
 import { prisma } from "../../database/prisma.js";
 import { AppError } from "../../utils/safe-error.js";
 import { gameDeliveryService } from "../game-delivery/game-delivery.service.js";
@@ -287,7 +288,54 @@ export class UserRewardCycleService {
             expiresAt: addHours(now, 24)
           }
         });
-        const cycle = await this.getOrCreateActiveCycleTx(tx, input.userId);
+        let cycle = await this.getOrCreateActiveCycleTx(tx, input.userId);
+
+        // Serialize all claims for this user's cycle: locking the cycle row makes
+        // the eligibility read and the cycle-completion counting consistent against
+        // concurrent claims and concurrent payment progress increments.
+        await tx.$queryRaw`SELECT "id" FROM "user_reward_cycles" WHERE "id" = ${cycle.id}::uuid FOR UPDATE`;
+        cycle = await tx.userRewardCycle.findUniqueOrThrow({ where: { id: cycle.id } });
+
+        // Defense in depth: the controller already blocks blocked/unverified users,
+        // but re-check inside the atomic claim so a box can never be granted to a
+        // blocked or unverified account.
+        const claimingUser = await tx.user.findUnique({
+          where: { id: input.userId },
+          select: { status: true, emailVerifiedAt: true }
+        });
+
+        if (!claimingUser || claimingUser.status === "suspended" || claimingUser.status === "deleted") {
+          await recordPaymentAudit(tx, {
+            actorType: "user",
+            actorId: input.userId,
+            eventType: "REWARD_TIER_CLAIM_REJECTED_USER_STATUS",
+            entityType: "user",
+            entityId: input.userId,
+            userId: input.userId,
+            idempotencyKey: input.idempotencyKey,
+            requestInfo: input.requestInfo,
+            success: false,
+            reason: "user_blocked_or_deleted"
+          });
+          throw new AppError(403, "FORBIDDEN", "Conta indisponivel para resgate.");
+        }
+
+        if (env.EMAIL_REQUIRE_VERIFIED && !claimingUser.emailVerifiedAt) {
+          await recordPaymentAudit(tx, {
+            actorType: "user",
+            actorId: input.userId,
+            eventType: "REWARD_TIER_CLAIM_REJECTED_EMAIL_NOT_VERIFIED",
+            entityType: "user",
+            entityId: input.userId,
+            userId: input.userId,
+            idempotencyKey: input.idempotencyKey,
+            requestInfo: input.requestInfo,
+            success: false,
+            reason: "email_not_verified"
+          });
+          throw new AppError(403, "EMAIL_NOT_VERIFIED", "Confirme seu e-mail antes de resgatar.");
+        }
+
         const tier = await tx.rewardTier.findFirst({
           where: {
             code: input.tierCode,

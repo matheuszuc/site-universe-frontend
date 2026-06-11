@@ -42,7 +42,7 @@ export class UsersRepository {
 
   async incrementLoginFailureAtomic(id: string, maxFailures: number, lockMinutes: number) {
     return prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT 1 FROM "User" WHERE "id" = ${id} FOR UPDATE`;
+      await tx.$executeRaw`SELECT 1 FROM "users" WHERE "id" = ${id}::uuid FOR UPDATE`;
       const user = await tx.user.findUniqueOrThrow({ where: { id } });
       const newCount = user.failedLoginCount + 1;
       const now = new Date();

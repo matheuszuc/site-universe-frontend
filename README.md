@@ -48,6 +48,81 @@ Não inclui Stripe, Banco Inter, carrinho, painel admin, OAuth, 2FA/MFA ou prove
 - Os nomes internos `up_amount`, `required_up_total` e `accumulated_up` continuam por compatibilidade de schema, mas a exibicao publica usa AP.
 - Nao ha gateway alternativo, Banco Inter, painel admin ou integracao com FFAccount nesta etapa.
 
+## Hardening transacional (pagamento, Unicoin, resgate, entrega)
+
+A moeda publica e Unicoin; nomes internos como `up_amount`, `reward_amount`,
+`pvalues` e `AP` permanecem por compatibilidade com o Grand Fantasia.
+
+### Responsabilidades
+
+- O **backend** recebe o webhook, valida assinatura/status/valor server-to-server
+  no Mercado Pago e so entao chama a transacao interna. Nenhuma chamada HTTP ou ao
+  Mercado Pago acontece dentro do banco.
+- O **PostgreSQL** garante a consistencia final via transacoes Prisma com
+  `SELECT ... FOR UPDATE` e indices unicos. Nao ha funcao PL/pgSQL: a atomicidade
+  ja e garantida pelos locks de linha + constraints, sem fragmentar a logica de
+  entrega GF entre SQL e TypeScript.
+
+### Aprovacao de pagamento — `approvePaymentFromVerifiedWebhook`
+
+Roda em uma unica `prisma.$transaction`:
+
+1. `SELECT ... FOR UPDATE` na linha de `payments` e na de `orders` (serializa
+   webhooks concorrentes/duplicados).
+2. Se o pagamento ja esta `approved`, retorna idempotente sem reprocessar.
+3. Rejeita status nao aprovavel, usuario `suspended`/`deleted`, e-mail nao
+   verificado (quando `EMAIL_REQUIRE_VERIFIED=true`), pedido expirado
+   (`order.expiresAt`), e divergencia de valor/moeda/pacote.
+4. Em caso de aprovacao: marca `order=paid` + `payment=approved`, cria
+   `wallet_transactions` (credito Unicoin), `reward_deliveries` e `game_deliveries`
+   do tipo `CREDIT_AP` — cada um protegido por `idempotency_key` unico.
+
+Idempotencia garantida no banco por indices parciais:
+`payments_one_approved_per_order_key` (um aprovado por pedido),
+`wallet_transactions_credit_purchase_payment_key` (um credito por pagamento),
+`payments_provider_provider_payment_id_key` (um `provider_payment_id` por
+provedor; `NULL` permanece permitido), alem dos `idempotency_key` unicos.
+
+### Resgate da Escala — `claimTier`
+
+Roda em uma unica `prisma.$transaction`:
+
+1. `userId` vem da **sessao** validada, nunca do frontend.
+2. `SELECT ... FOR UPDATE` na linha de `user_reward_cycles` (serializa resgates
+   concorrentes do mesmo ciclo e mantem a contagem de ranks consistente).
+3. Re-checa usuario ativo + e-mail verificado dentro da transacao.
+4. Valida meta de Unicoin do ciclo, rank liberado, e `box_game_item_id` presente.
+5. Cria o claim e a `game_deliveries` `REWARD_BOX` uma unica vez. Duplo clique e
+   requests paralelas sao barrados por `user_reward_tier_claims` unico
+   (`user_reward_cycle_id, reward_tier_id`) + `idempotency_keys`.
+
+`box_game_item_id` dos ranks (NAO alterar): rank_1=60045, rank_2=60046,
+rank_3=60047, rank_4=60048, rank_5=60049, rank_6=60050.
+
+### Como testar idempotencia/concorrencia (manual)
+
+1. Crie um pedido Pix com usuario verificado e simule aprovacao
+   (`/webhooks/mercado-pago` ou simulador dev). Confirme **um** credito e **uma**
+   `game_deliveries`.
+2. Reenvie o mesmo webhook (mesmo `eventId`/`dataId`): a resposta deve ser
+   `replay`/`alreadyApproved`, sem segundo credito.
+3. Dispare dois webhooks em paralelo para o mesmo pagamento: apenas um credita;
+   o outro retorna idempotente (garantido por `FOR UPDATE` +
+   `payments_one_approved_per_order_key`).
+4. Expire um pedido (`expiresAt` no passado) e aprove: deve ser rejeitado sem
+   entrega, com log `PAYMENT_APPROVE_REJECTED_ORDER_EXPIRED`.
+5. Suspenda o usuario e aprove: rejeitado com
+   `PAYMENT_APPROVE_REJECTED_BY_USER_STATUS`.
+6. Na Escala, clique "Resgatar" duas vezes rapidamente / em duas abas: apenas uma
+   `game_deliveries` `REWARD_BOX` e criada.
+
+### Rollback seguro
+
+- Esta etapa nao alterou dados nem removeu colunas. A unica migration trazida e
+  de reconciliacao (`admin_audit_logs`, default de role, IDs das caixas) ja
+  aplicada no banco. Reverter o codigo (git) restaura o comportamento anterior; os
+  indices de idempotencia ja existiam desde `20260603000000_payment_domain_modeling`.
+
 ## Atualização de Conta Antiga
 
 - A rota pública `/atualizar-conta` inicia o fluxo de atualização de contas antigas.
@@ -199,13 +274,13 @@ EMAIL_FROM="Site Universe <noreply@seudominio.com>"
 - AP vem do pedido aprovado no backend.
 - A conta GF vem de `game_accounts.game_login` vinculada ao usuario.
 - O item da caixa vem de `reward_tiers.box_game_item_id`.
-- Para preencher IDs das caixas, atualize `reward_tiers.box_game_item_id` no banco ou em uma seed/migration:
-  - `rank_1` / Escala Rank 1 = `TODO_ITEM_ID_RANK_1`
-  - `rank_2` / Escala Rank 2 = `TODO_ITEM_ID_RANK_2`
-  - `rank_3` / Escala Rank 3 = `TODO_ITEM_ID_RANK_3`
-  - `rank_4` / Escala Rank 4 = `TODO_ITEM_ID_RANK_4`
-  - `rank_5` / Escala Rank 5 = `TODO_ITEM_ID_RANK_5`
-  - `rank_6` / Escala Rank 6 = `TODO_ITEM_ID_RANK_6`
+- Os IDs das caixas ja estao definidos pela migration `20260608000000_set_reward_tier_box_item_ids` (NAO alterar):
+  - `rank_1` / Escala Rank 1 = `60045`
+  - `rank_2` / Escala Rank 2 = `60046`
+  - `rank_3` / Escala Rank 3 = `60047`
+  - `rank_4` / Escala Rank 4 = `60048`
+  - `rank_5` / Escala Rank 5 = `60049`
+  - `rank_6` / Escala Rank 6 = `60050`
 - Enquanto `box_game_item_id` estiver vazio, o resgate retorna erro seguro: `Recompensa indisponivel no momento.`
 
 Para processar pendentes manualmente:

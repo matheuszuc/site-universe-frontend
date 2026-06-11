@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { sessionCookieName } from "../../config/cookies.js";
+import { env } from "../../config/env.js";
 import { prisma } from "../../database/prisma.js";
 import { AppError } from "../../utils/safe-error.js";
 import { authService } from "../auth/auth.service.js";
@@ -515,7 +516,7 @@ export class OrdersService {
       // Verify user is still active before delivering rewards
       const user = await tx.user.findUnique({
         where: { id: payment.userId },
-        select: { id: true, status: true }
+        select: { id: true, status: true, emailVerifiedAt: true }
       });
 
       if (!user || user.status === "suspended" || user.status === "deleted") {
@@ -533,6 +534,25 @@ export class OrdersService {
           metadata: { ...(typeof input.metadata === "object" && input.metadata !== null ? input.metadata : {}), userStatus: user?.status ?? "not_found" }
         });
         throw new AppError(409, "CONFLICT", "Usuário não pode receber entrega no status atual.");
+      }
+
+      // Defense in depth: order creation already requires a verified email, but
+      // re-check here so a payment can never deliver to an unverified account.
+      if (env.EMAIL_REQUIRE_VERIFIED && !user.emailVerifiedAt) {
+        await recordPaymentAudit(tx, {
+          actorType: "webhook",
+          eventType: "PAYMENT_APPROVE_REJECTED_EMAIL_NOT_VERIFIED",
+          entityType: "payment",
+          entityId: payment.id,
+          userId: payment.userId,
+          orderId: payment.orderId,
+          paymentId: payment.id,
+          requestInfo: { requestId: input.requestId ?? undefined },
+          success: false,
+          reason: "email_not_verified",
+          metadata: typeof input.metadata === "object" && input.metadata !== null ? input.metadata : {}
+        });
+        throw new AppError(409, "CONFLICT", "Usuário precisa confirmar o e-mail antes da entrega.");
       }
 
       // Verify order has not expired

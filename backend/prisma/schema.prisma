@@ -38,6 +38,7 @@ model User {
   gameAccounts            GameAccount[]
   gameDeliveries          GameDelivery[]
   accountMigrationAuditLogs AccountMigrationAuditLog[]
+  adminAuditLogs          AdminAuditLog[]             @relation("AdminAuditLogs")
 
   @@index([emailNormalized])
   @@map("users")
@@ -544,4 +545,24 @@ model AccountMigrationAuditLog {
   @@index([userId])
   @@index([createdAt])
   @@map("account_migration_audit_logs")
+}
+
+model AdminAuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  adminId    String?  @map("admin_id") @db.Uuid
+  action     String
+  targetType String?  @map("target_type")
+  targetId   String?  @map("target_id")
+  metadata   Json?    @db.JsonB
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  admin User? @relation("AdminAuditLogs", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
 }
