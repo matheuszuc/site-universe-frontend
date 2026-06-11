@@ -10,15 +10,34 @@ const passwordSchema = z
     "A senha deve usar apenas letras minúsculas e números."
   );
 
+// Display name: letters (including accented), digits, spaces, hyphens, apostrophes
+// No HTML tags, control chars, or more than one consecutive space
+const nameSchema = z
+  .string()
+  .trim()
+  .min(2, "O nome deve ter no mínimo 2 caracteres.")
+  .max(60, "O nome deve ter no máximo 60 caracteres.")
+  .regex(
+    /^[\p{L}\p{N} '\-\.]+$/u,
+    "O nome contém caracteres inválidos."
+  )
+  .refine(
+    (v) => !/\s{2,}/.test(v),
+    "O nome não pode ter espaços consecutivos."
+  )
+  .transform((v) => v.replace(/\s+/g, " ").trim());
+
 export const registerSchema = z.object({
-  name: z.string().trim().min(2).max(60),
+  name: nameSchema,
   email: z.string().trim().email(),
-  password: passwordSchema
+  password: passwordSchema,
+  recaptchaToken: z.string().optional()
 });
 
 export const loginSchema = z.object({
   email: z.string().trim().email(),
-  password: z.string().min(1).max(128)
+  password: z.string().min(1).max(128),
+  recaptchaToken: z.string().optional()
 });
 
 export const emailOnlySchema = z.object({

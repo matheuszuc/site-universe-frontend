@@ -1,10 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import type ReCAPTCHA from 'react-google-recaptcha'
 import AuthCard from '../components/auth/AuthCard'
 import AuthHeader from '../components/auth/AuthHeader'
 import FormError from '../components/auth/FormError'
+import { RecaptchaWidget, isRecaptchaRequired } from '../components/auth/RecaptchaWidget'
 import PublicLayout from '../components/layout/PublicLayout'
 import Alert from '../components/ui/Alert'
 import Input from '../components/ui/Input'
@@ -32,6 +34,8 @@ export default function Login() {
   const [isResendingVerification, setIsResendingVerification] = useState(false)
   const [resendMessage, setResendMessage] = useState<string>()
   const [unverifiedEmail, setUnverifiedEmail] = useState<string>()
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+  const recaptchaRef = useRef<ReCAPTCHA>(null)
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -49,8 +53,13 @@ export default function Login() {
     setResendMessage(undefined)
     setUnverifiedEmail(undefined)
 
+    if (isRecaptchaRequired() && !recaptchaToken) {
+      setErrorMessage('Complete a verificação de segurança.')
+      return
+    }
+
     try {
-      await login(values)
+      await login({ ...values, recaptchaToken: recaptchaToken ?? undefined })
       const redirectTo = ((location.state as LoginLocationState | null)?.from?.pathname) ?? '/painel'
       navigate(redirectTo, { replace: true })
     } catch (error) {
@@ -59,6 +68,8 @@ export default function Login() {
       }
 
       setErrorMessage(getApiErrorMessage(error))
+      recaptchaRef.current?.reset()
+      setRecaptchaToken(null)
     }
   }
 
@@ -127,6 +138,8 @@ export default function Login() {
                 {t.login.forgotPassword}
               </Link>
             </div>
+
+            <RecaptchaWidget ref={recaptchaRef} onVerify={setRecaptchaToken} />
 
             <LoadingButton className="w-full" isLoading={isSubmitting} loadingText={t.login.submitting} type="submit">
               {t.login.submit}

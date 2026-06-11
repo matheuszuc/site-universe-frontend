@@ -28,7 +28,14 @@ export async function buildApp() {
   registerErrorHandler(app);
 
   await app.register(helmet, {
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      // API-only backend: responses are JSON, not HTML documents.
+      // Strict CSP prevents any accidental HTML rendering and clickjacking.
+      directives: {
+        defaultSrc: ["'none'"],
+        frameAncestors: ["'none'"]
+      }
+    },
     frameguard: {
       action: "deny"
     },

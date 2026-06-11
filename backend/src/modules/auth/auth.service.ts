@@ -10,6 +10,7 @@ import { emailService } from "../email/email.service.js";
 import { sessionsService } from "../sessions/sessions.service.js";
 import { csrfService } from "../security/csrf.service.js";
 import { passwordService } from "../security/password.service.js";
+import { recaptchaService } from "../security/recaptcha.service.js";
 import { securityEventsService } from "../security/security-events.service.js";
 import { tokenService } from "../security/token.service.js";
 import { usersService } from "../users/users.service.js";
@@ -137,6 +138,7 @@ function generateVerificationCode(length: number) {
 export class AuthService {
   async register(input: unknown, requestInfo: RequestInfo): Promise<AuthenticatedUser> {
     const parsedInput = registerSchema.parse(input) satisfies RegisterInput;
+    await recaptchaService.verify(parsedInput.recaptchaToken);
     const emailNormalized = normalizeEmail(parsedInput.email);
     const existingUser = await usersRepository.findByNormalizedEmail(emailNormalized);
 
@@ -275,12 +277,29 @@ export class AuthService {
       }
     });
 
-    if (
-      !verificationToken ||
-      !verificationToken.codeHash ||
-      verificationToken.expiresAt <= new Date() ||
-      verificationToken.codeAttemptCount >= 5
-    ) {
+    if (!verificationToken || !verificationToken.codeHash) {
+      await securityEventsService.record({
+        userId: user.id,
+        eventType: "EMAIL_VERIFY_CODE_FAILED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent
+      });
+      throw invalidVerificationCodeError;
+    }
+
+    // Atomically claim one attempt slot before checking code to prevent race conditions
+    const now = new Date();
+    const attemptClaimed = await prisma.emailVerificationToken.updateMany({
+      where: {
+        id: verificationToken.id,
+        usedAt: null,
+        expiresAt: { gt: now },
+        codeAttemptCount: { lt: 5 }
+      },
+      data: { codeAttemptCount: { increment: 1 } }
+    });
+
+    if (attemptClaimed.count === 0) {
       await securityEventsService.record({
         userId: user.id,
         eventType: "EMAIL_VERIFY_CODE_FAILED",
@@ -293,16 +312,6 @@ export class AuthService {
     const codeHash = tokenService.hashToken(parsedInput.code);
 
     if (verificationToken.codeHash !== codeHash) {
-      await prisma.emailVerificationToken.update({
-        where: {
-          id: verificationToken.id
-        },
-        data: {
-          codeAttemptCount: {
-            increment: 1
-          }
-        }
-      });
       await securityEventsService.record({
         userId: user.id,
         eventType: "EMAIL_VERIFY_CODE_FAILED",
@@ -312,16 +321,16 @@ export class AuthService {
       throw invalidVerificationCodeError;
     }
 
-    const now = new Date();
+    const verifiedAt = new Date();
     await prisma.$transaction([
       prisma.emailVerificationToken.update({
         where: { id: verificationToken.id },
-        data: { usedAt: now }
+        data: { usedAt: verifiedAt }
       }),
       prisma.user.update({
         where: { id: user.id },
         data: {
-          emailVerifiedAt: now,
+          emailVerifiedAt: verifiedAt,
           status: user.status === "pending_verification" ? "active" : user.status
         }
       })
@@ -439,6 +448,7 @@ export class AuthService {
 
   async login(input: unknown, requestInfo: RequestInfo): Promise<LoginResult> {
     const parsedInput = loginSchema.parse(input) satisfies LoginInput;
+    await recaptchaService.verify(parsedInput.recaptchaToken);
     const emailNormalized = normalizeEmail(parsedInput.email);
     const user = await usersService.findByEmail(emailNormalized);
 
@@ -454,6 +464,7 @@ export class AuthService {
       throw invalidCredentialsError;
     }
 
+    // Check locked/blocked status BEFORE expensive Argon2id to save CPU
     if (isAccountLocked(user)) {
       await securityEventsService.record({
         userId: user.id,
@@ -461,39 +472,6 @@ export class AuthService {
         ip: requestInfo.ip,
         userAgent: requestInfo.userAgent
       });
-      throw invalidCredentialsError;
-    }
-
-    const passwordMatches = await passwordService.verifyPassword(
-      user.passwordHash,
-      parsedInput.password
-    );
-
-    if (!passwordMatches) {
-      const failedLoginCount = user.failedLoginCount + 1;
-      const lockedUntil = getNextLockedUntil(failedLoginCount);
-
-      await usersService.markLoginFailed(user.id, failedLoginCount, lockedUntil);
-      await securityEventsService.record({
-        userId: user.id,
-        eventType: "LOGIN_FAILED",
-        ip: requestInfo.ip,
-        userAgent: requestInfo.userAgent,
-        metadata: {
-          reason: "invalid_credentials",
-          locked: Boolean(lockedUntil)
-        }
-      });
-
-      if (lockedUntil) {
-        await securityEventsService.record({
-          userId: user.id,
-          eventType: "LOGIN_BLOCKED_ACCOUNT_LOCKED",
-          ip: requestInfo.ip,
-          userAgent: requestInfo.userAgent
-        });
-      }
-
       throw invalidCredentialsError;
     }
 
@@ -510,6 +488,42 @@ export class AuthService {
       throw invalidCredentialsError;
     }
 
+    const passwordMatches = await passwordService.verifyPassword(
+      user.passwordHash,
+      parsedInput.password
+    );
+
+    if (!passwordMatches) {
+      const updatedUser = await usersRepository.incrementLoginFailureAtomic(
+        user.id,
+        env.LOGIN_ACCOUNT_LOCK_MAX_FAILURES,
+        env.LOGIN_ACCOUNT_LOCK_MINUTES
+      );
+      const lockedNow = Boolean(updatedUser.lockedUntil && updatedUser.lockedUntil > new Date());
+
+      await securityEventsService.record({
+        userId: user.id,
+        eventType: "LOGIN_FAILED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent,
+        metadata: {
+          reason: "invalid_credentials",
+          locked: lockedNow
+        }
+      });
+
+      if (lockedNow) {
+        await securityEventsService.record({
+          userId: user.id,
+          eventType: "LOGIN_BLOCKED_ACCOUNT_LOCKED",
+          ip: requestInfo.ip,
+          userAgent: requestInfo.userAgent
+        });
+      }
+
+      throw invalidCredentialsError;
+    }
+
     if (env.EMAIL_REQUIRE_VERIFIED && !user.emailVerifiedAt) {
       await securityEventsService.record({
         userId: user.id,
@@ -518,6 +532,10 @@ export class AuthService {
         userAgent: requestInfo.userAgent
       });
       throw emailNotVerifiedError;
+    }
+
+    if (env.SINGLE_ACTIVE_SESSION) {
+      await sessionsService.revokeActiveSessionsForUser(user.id, "new_login");
     }
 
     const session = await sessionsService.createSession(user.id, requestInfo);

@@ -33,7 +33,19 @@ function isAllowedOrigin(origin: string) {
 export const corsOptions: FastifyCorsOptions = {
   credentials: true,
   origin(origin, callback) {
-    if (!origin || isAllowedOrigin(origin)) {
+    // No Origin header = server-to-server or same-origin (e.g. webhook from Mercado Pago)
+    if (origin === undefined) {
+      callback(null, true);
+      return;
+    }
+
+    // Reject literal "null" origin (sandboxed iframes, file:// pages)
+    if (origin === "null") {
+      callback(null, false);
+      return;
+    }
+
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
       return;
     }

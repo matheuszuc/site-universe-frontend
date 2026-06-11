@@ -512,6 +512,47 @@ export class OrdersService {
         throw new AppError(409, "CONFLICT", "Pagamento nao pode ser aprovado nesse status.");
       }
 
+      // Verify user is still active before delivering rewards
+      const user = await tx.user.findUnique({
+        where: { id: payment.userId },
+        select: { id: true, status: true }
+      });
+
+      if (!user || user.status === "suspended" || user.status === "deleted") {
+        await recordPaymentAudit(tx, {
+          actorType: "webhook",
+          eventType: "PAYMENT_APPROVE_REJECTED_BY_USER_STATUS",
+          entityType: "payment",
+          entityId: payment.id,
+          userId: payment.userId,
+          orderId: payment.orderId,
+          paymentId: payment.id,
+          requestInfo: { requestId: input.requestId ?? undefined },
+          success: false,
+          reason: "user_blocked_or_deleted",
+          metadata: { ...(typeof input.metadata === "object" && input.metadata !== null ? input.metadata : {}), userStatus: user?.status ?? "not_found" }
+        });
+        throw new AppError(409, "CONFLICT", "Usuário não pode receber entrega no status atual.");
+      }
+
+      // Verify order has not expired
+      if (payment.order.expiresAt && payment.order.expiresAt < now) {
+        await recordPaymentAudit(tx, {
+          actorType: "webhook",
+          eventType: "PAYMENT_APPROVE_REJECTED_ORDER_EXPIRED",
+          entityType: "payment",
+          entityId: payment.id,
+          userId: payment.userId,
+          orderId: payment.orderId,
+          paymentId: payment.id,
+          requestInfo: { requestId: input.requestId ?? undefined },
+          success: false,
+          reason: "order_expired",
+          metadata: { ...(typeof input.metadata === "object" && input.metadata !== null ? input.metadata : {}), expiresAt: payment.order.expiresAt.toISOString() }
+        });
+        throw new AppError(409, "CONFLICT", "Pedido expirado. Entre em contato com o suporte.");
+      }
+
       if (
         payment.order.status !== "pending_payment" ||
         payment.amountCents !== payment.order.amountCents ||

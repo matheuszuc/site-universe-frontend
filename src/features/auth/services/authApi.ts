@@ -33,7 +33,11 @@ export const authApi = {
   async login(payload: LoginFormValues) {
     const response = await apiRequest<AuthUserResponse>('/auth/login', {
       method: 'POST',
-      body: payload,
+      body: {
+        email: payload.email,
+        password: payload.password,
+        recaptchaToken: payload.recaptchaToken,
+      },
     })
 
     return response.user
@@ -46,6 +50,7 @@ export const authApi = {
         name: payload.username,
         email: payload.email,
         password: payload.password,
+        recaptchaToken: payload.recaptchaToken,
       },
     })
 

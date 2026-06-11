@@ -18,6 +18,10 @@ export class UsersService {
     return usersRepository.recordLoginFailure(id, failedLoginCount, lockedUntil);
   }
 
+  incrementLoginFailureAtomic(id: string, maxFailures: number, lockMinutes: number) {
+    return usersRepository.incrementLoginFailureAtomic(id, maxFailures, lockMinutes);
+  }
+
   markEmailVerified(id: string, verifiedAt: Date) {
     return usersRepository.markEmailVerified(id, verifiedAt);
   }

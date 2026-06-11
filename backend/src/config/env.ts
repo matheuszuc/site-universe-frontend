@@ -15,7 +15,7 @@ const optionalEmailStringSchema = z.preprocess(
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
   PORT: z.coerce.number().int().positive().default(3333),
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
   APP_PUBLIC_URL: z.string().url().default("http://localhost:5173"),
@@ -50,6 +50,10 @@ const envSchema = z.object({
   EMAIL_VERIFICATION_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes"),
   ACCOUNT_MIGRATION_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
   ACCOUNT_MIGRATION_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes"),
+  ACCOUNT_MIGRATION_ENABLED: booleanStringSchema.default(true),
+  RECAPTCHA_ENABLED: booleanStringSchema.default(false),
+  RECAPTCHA_SECRET_KEY: z.string().optional(),
+  SINGLE_ACTIVE_SESSION: booleanStringSchema.default(false),
   GF_DB_HOST: z.string().optional(),
   GF_DB_PORT: z.coerce.number().int().positive().default(5432),
   GF_DB_USER: z.string().optional(),

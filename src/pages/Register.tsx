@@ -1,10 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
+import type ReCAPTCHA from 'react-google-recaptcha'
 import AuthCard from '../components/auth/AuthCard'
 import AuthHeader from '../components/auth/AuthHeader'
 import FormError from '../components/auth/FormError'
+import { RecaptchaWidget, isRecaptchaRequired } from '../components/auth/RecaptchaWidget'
 import PublicLayout from '../components/layout/PublicLayout'
 import Alert from '../components/ui/Alert'
 import Input from '../components/ui/Input'
@@ -21,6 +23,8 @@ export default function Register() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [errorMessage, setErrorMessage] = useState<string>()
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+  const recaptchaRef = useRef<ReCAPTCHA>(null)
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -39,11 +43,18 @@ export default function Register() {
   async function onSubmit(values: RegisterFormValues) {
     setErrorMessage(undefined)
 
+    if (isRecaptchaRequired() && !recaptchaToken) {
+      setErrorMessage('Complete a verificação de segurança.')
+      return
+    }
+
     try {
-      await registerAccount(values)
+      await registerAccount({ ...values, recaptchaToken: recaptchaToken ?? undefined })
       navigate('/verify-email', { state: { email: values.email, mode: 'sent' } })
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error))
+      recaptchaRef.current?.reset()
+      setRecaptchaToken(null)
     }
   }
 
@@ -141,6 +152,8 @@ export default function Register() {
               </div>
               <FormError message={errors.terms?.message} />
             </div>
+
+            <RecaptchaWidget ref={recaptchaRef} onVerify={setRecaptchaToken} />
 
             <LoadingButton className="w-full" isLoading={isSubmitting} loadingText={t.register.submitting} type="submit">
               {t.register.submit}

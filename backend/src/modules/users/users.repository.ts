@@ -40,6 +40,24 @@ export class UsersRepository {
     });
   }
 
+  async incrementLoginFailureAtomic(id: string, maxFailures: number, lockMinutes: number) {
+    return prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT 1 FROM "User" WHERE "id" = ${id} FOR UPDATE`;
+      const user = await tx.user.findUniqueOrThrow({ where: { id } });
+      const newCount = user.failedLoginCount + 1;
+      const now = new Date();
+      const lockedUntil =
+        newCount >= maxFailures
+          ? new Date(now.getTime() + lockMinutes * 60 * 1000)
+          : user.lockedUntil;
+
+      return tx.user.update({
+        where: { id },
+        data: { failedLoginCount: newCount, lockedUntil }
+      });
+    });
+  }
+
   markEmailVerified(id: string, verifiedAt: Date) {
     return prisma.user.update({
       where: { id },

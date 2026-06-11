@@ -17,6 +17,7 @@ export const registerSchema = z
     password: z.string().min(1, formMessages.requiredPassword).regex(passwordRegex, formMessages.passwordStrength),
     confirmPassword: z.string().min(1, 'Confirme sua senha.'),
     terms: z.boolean().refine((value) => value, 'Você precisa aceitar os termos.'),
+    recaptchaToken: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: formMessages.passwordConfirmation,
