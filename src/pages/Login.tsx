@@ -54,7 +54,7 @@ export default function Login() {
     setUnverifiedEmail(undefined)
 
     if (isRecaptchaRequired() && !recaptchaToken) {
-      setErrorMessage('Complete a verificação de segurança.')
+      setErrorMessage(t.auth.recaptchaRequired)
       return
     }
 

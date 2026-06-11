@@ -22,6 +22,7 @@ const fr: Translations = {
     passwordPlaceholder: 'Votre mot de passe',
     newPasswordPlaceholder: 'Nouveau mot de passe',
     confirmNewPasswordPlaceholder: 'Répétez le nouveau mot de passe',
+    recaptchaRequired: 'Veuillez compléter le reCAPTCHA avant de continuer.',
   },
 
   login: {

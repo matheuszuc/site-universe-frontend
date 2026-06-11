@@ -22,6 +22,7 @@ const es: Translations = {
     passwordPlaceholder: 'Tu contraseña',
     newPasswordPlaceholder: 'Nueva contraseña',
     confirmNewPasswordPlaceholder: 'Repite la nueva contraseña',
+    recaptchaRequired: 'Completa el reCAPTCHA antes de continuar.',
   },
 
   login: {

@@ -6,11 +6,19 @@ type RecaptchaWidgetProps = {
 }
 
 const SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined
-const ENABLED = import.meta.env.VITE_RECAPTCHA_ENABLED === 'true'
+
+// VITE_RECAPTCHA_ENABLED=false explicitly disables the widget (dev bypass).
+// Absent or any other value = enabled whenever SITE_KEY is present.
+const EXPLICITLY_DISABLED = import.meta.env.VITE_RECAPTCHA_ENABLED === 'false'
+
+/** True when the reCAPTCHA widget will be rendered and its token is required. */
+export function isRecaptchaRequired(): boolean {
+  return Boolean(SITE_KEY) && !EXPLICITLY_DISABLED
+}
 
 export const RecaptchaWidget = forwardRef<ReCAPTCHA, RecaptchaWidgetProps>(
   ({ onVerify }, ref) => {
-    if (!ENABLED || !SITE_KEY) {
+    if (!isRecaptchaRequired()) {
       return null
     }
 
@@ -18,17 +26,13 @@ export const RecaptchaWidget = forwardRef<ReCAPTCHA, RecaptchaWidgetProps>(
       <div className="flex justify-center">
         <ReCAPTCHA
           ref={ref}
-          sitekey={SITE_KEY}
+          sitekey={SITE_KEY as string}
           theme="dark"
           onChange={onVerify}
         />
       </div>
     )
-  }
+  },
 )
 
 RecaptchaWidget.displayName = 'RecaptchaWidget'
-
-export function isRecaptchaRequired() {
-  return ENABLED && Boolean(SITE_KEY)
-}

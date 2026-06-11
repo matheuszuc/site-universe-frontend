@@ -9,6 +9,7 @@ export type Translations = {
     newPassword: string; confirmPassword: string; confirmNewPassword: string
     passwordPlaceholder: string; newPasswordPlaceholder: string
     confirmNewPasswordPlaceholder: string
+    recaptchaRequired: string
   }
   login: {
     title: string; subtitle: string; forgotPassword: string
@@ -152,6 +153,7 @@ const ptBR: Translations = {
     passwordPlaceholder: 'Sua senha',
     newPasswordPlaceholder: 'Nova senha',
     confirmNewPasswordPlaceholder: 'Repita a nova senha',
+    recaptchaRequired: 'Confirme o reCAPTCHA antes de continuar.',
   },
 
   login: {

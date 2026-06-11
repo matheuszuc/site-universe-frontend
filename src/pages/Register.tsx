@@ -44,7 +44,7 @@ export default function Register() {
     setErrorMessage(undefined)
 
     if (isRecaptchaRequired() && !recaptchaToken) {
-      setErrorMessage('Complete a verificação de segurança.')
+      setErrorMessage(t.auth.recaptchaRequired)
       return
     }
 

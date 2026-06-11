@@ -22,6 +22,7 @@ const enUS: Translations = {
     passwordPlaceholder: 'Your password',
     newPasswordPlaceholder: 'New password',
     confirmNewPasswordPlaceholder: 'Repeat new password',
+    recaptchaRequired: 'Please complete the reCAPTCHA before continuing.',
   },
 
   login: {
