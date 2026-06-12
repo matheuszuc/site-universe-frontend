@@ -13,6 +13,7 @@ export type AccountMigrationStatus =
 export type StartAccountMigrationInput = {
   gameLogin: string
   currentPassword: string
+  recaptchaToken?: string
 }
 
 export type CompleteAccountMigrationInput = {

@@ -10,22 +10,18 @@ const passwordSchema = z
     "A senha deve usar apenas letras minúsculas e números."
   );
 
-// Display name: letters (including accented), digits, spaces, hyphens, apostrophes
-// No HTML tags, control chars, or more than one consecutive space
+// Registration username = the GF game login (mid). Must be game-login compatible:
+// only letters and digits (no spaces, accents, HTML, or control chars), matching
+// the frontend username rule. Alphanumeric-only is inherently XSS-safe.
 const nameSchema = z
   .string()
   .trim()
-  .min(2, "O nome deve ter no mínimo 2 caracteres.")
-  .max(60, "O nome deve ter no máximo 60 caracteres.")
+  .min(3, "O nome de usuário deve ter no mínimo 3 caracteres.")
+  .max(20, "O nome de usuário deve ter no máximo 20 caracteres.")
   .regex(
-    /^[\p{L}\p{N} '\-\.]+$/u,
-    "O nome contém caracteres inválidos."
-  )
-  .refine(
-    (v) => !/\s{2,}/.test(v),
-    "O nome não pode ter espaços consecutivos."
-  )
-  .transform((v) => v.replace(/\s+/g, " ").trim());
+    /^[A-Za-z0-9]+$/,
+    "O nome de usuário deve usar apenas letras e números."
+  );
 
 export const registerSchema = z.object({
   name: nameSchema,

@@ -6,7 +6,6 @@ import { AppError } from "../../utils/safe-error.js";
 type VerificationEmailInput = {
   email: string;
   verificationCode: string;
-  verificationLink: string;
   expiresInMinutes: number;
 };
 
@@ -16,31 +15,32 @@ function assertEmailProviderAllowed() {
   }
 }
 
+// Code-only verification email. Intentionally no clickable verification link:
+// in local/staging a link built from FRONTEND_URL can point to the wrong
+// port/domain and fail. The manual code is the only verification path.
 function buildVerificationEmail(input: VerificationEmailInput) {
-  const subject = "Confirme seu e-mail no Site Universe";
+  const subject = "Seu código de verificação — Site Universe";
   const text = [
-    "Confirme seu e-mail no Site Universe",
+    "Olá!",
     "",
-    "Recebemos uma solicitacao de cadastro ou atualizacao de conta.",
-    `Abra o link para confirmar: ${input.verificationLink}`,
-    `Ou informe este codigo: ${input.verificationCode}`,
-    `Este codigo expira em ${input.expiresInMinutes} minutos.`,
+    "Seu código de verificação do Site Universe é:",
     "",
-    "Se voce nao criou conta no Site Universe, ignore esta mensagem."
+    input.verificationCode,
+    "",
+    "Digite este código na tela de verificação do site para confirmar seu e-mail.",
+    "",
+    `Este código expira em ${input.expiresInMinutes} minutos.`,
+    "",
+    "Se você não criou uma conta no Site Universe, ignore este e-mail."
   ].join("\n");
   const html = `
     <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
-      <h1 style="margin: 0 0 16px;">Confirme seu e-mail</h1>
-      <p>Recebemos uma solicitacao de cadastro ou atualizacao de conta no Site Universe.</p>
-      <p>
-        <a href="${input.verificationLink}" style="display: inline-block; background: #0891b2; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; font-weight: 700;">
-          Confirmar e-mail
-        </a>
-      </p>
-      <p>Codigo de confirmacao:</p>
-      <p style="font-size: 24px; font-weight: 800; letter-spacing: 4px;">${input.verificationCode}</p>
-      <p>Este codigo expira em ${input.expiresInMinutes} minutos.</p>
-      <p>Se voce nao criou conta no Site Universe, ignore esta mensagem.</p>
+      <h1 style="margin: 0 0 16px;">Seu código de verificação</h1>
+      <p>Olá! Seu código de verificação do Site Universe é:</p>
+      <p style="font-size: 32px; font-weight: 800; letter-spacing: 8px; margin: 24px 0;">${input.verificationCode}</p>
+      <p>Digite este código na tela de verificação do site para confirmar seu e-mail.</p>
+      <p>Este código expira em ${input.expiresInMinutes} minutos.</p>
+      <p>Se você não criou uma conta no Site Universe, ignore este e-mail.</p>
     </div>
   `;
 
@@ -110,9 +110,10 @@ export class EmailService {
     assertEmailProviderAllowed();
 
     if (env.EMAIL_PROVIDER === "console") {
-      console.info("[dev-email] Verification email", {
+      // Console provider is dev-only (blocked in production by
+      // assertEmailProviderAllowed), so printing the code here is safe.
+      console.info("[dev-email] Verification code", {
         to: input.email,
-        verificationLink: input.verificationLink,
         verificationCode: input.verificationCode
       });
       return;

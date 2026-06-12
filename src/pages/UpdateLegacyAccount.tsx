@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import type ReCAPTCHA from 'react-google-recaptcha'
 import AuthCard from '../components/auth/AuthCard'
 import AuthHeader from '../components/auth/AuthHeader'
+import { RecaptchaWidget, isRecaptchaRequired } from '../components/auth/RecaptchaWidget'
 import PublicLayout from '../components/layout/PublicLayout'
 import Alert from '../components/ui/Alert'
 import Input from '../components/ui/Input'
@@ -55,6 +57,9 @@ export default function UpdateLegacyAccount() {
   const [successMessage, setSuccessMessage] = useState<string>()
   const [isLoading, setIsLoading] = useState(false)
   const [isCheckingStatus, setIsCheckingStatus] = useState(true)
+  const [migrationDisabled, setMigrationDisabled] = useState(false)
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
+  const recaptchaRef = useRef<ReCAPTCHA>(null)
   const passwordRules = useMemo(() => getPasswordRules(t), [t])
   const passwordChecks = useMemo(
     () => passwordRules.map((rule) => ({ ...rule, valid: rule.test(newPassword) })),
@@ -78,9 +83,16 @@ export default function UpdateLegacyAccount() {
           setGameLogin(status.gameLogin)
           setStep('complete')
         }
-      } catch {
+      } catch (error) {
         if (isMounted) {
-          setStep('credentials')
+          // Migration turned off by env flag: show a friendly notice instead of the form.
+          if (error instanceof ApiError && error.code === 'MIGRATION_DISABLED') {
+            setMigrationDisabled(true)
+          } else {
+            // Any other (transient) failure: fall back to the start form so the
+            // page is never stuck and the user can still begin a migration.
+            setStep('credentials')
+          }
         }
       } finally {
         if (isMounted) {
@@ -108,12 +120,18 @@ export default function UpdateLegacyAccount() {
       return
     }
 
+    if (isRecaptchaRequired() && !recaptchaToken) {
+      setErrorMessage(t.auth.recaptchaRequired)
+      return
+    }
+
     setIsLoading(true)
 
     try {
       const result = await startAccountMigration({
         gameLogin: normalizedGameLogin,
         currentPassword,
+        recaptchaToken: recaptchaToken ?? undefined,
       })
       setGameLogin(result.gameLogin)
       setCurrentPassword('')
@@ -126,6 +144,8 @@ export default function UpdateLegacyAccount() {
       } else {
         setErrorMessage(getApiErrorMessage(error))
       }
+      recaptchaRef.current?.reset()
+      setRecaptchaToken(null)
     } finally {
       setIsLoading(false)
     }
@@ -173,6 +193,14 @@ export default function UpdateLegacyAccount() {
             <div className="panel-state" role="status">
               {t.migration.loading}
             </div>
+          ) : migrationDisabled ? (
+            <>
+              <AuthHeader title={t.migration.title} subtitle={t.migration.unavailable} />
+              <Alert tone="error">{t.migration.unavailable}</Alert>
+              <Link className="mt-5 inline-flex font-bold text-white hover:text-cyan-100" to="/login">
+                {t.migration.goToLogin}
+              </Link>
+            </>
           ) : (
             <>
               {step === 'credentials' && (
@@ -218,6 +246,8 @@ export default function UpdateLegacyAccount() {
                     <div className="legacy-security-note">
                       {t.migration.securityNote}
                     </div>
+
+                    <RecaptchaWidget ref={recaptchaRef} onVerify={setRecaptchaToken} />
 
                     <LoadingButton
                       className="w-full"

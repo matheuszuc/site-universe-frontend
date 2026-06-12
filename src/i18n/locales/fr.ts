@@ -37,6 +37,14 @@ const fr: Translations = {
     updateAccount: 'Mettre à jour le compte',
     resendEmail: "Renvoyer l'e-mail",
     resending: 'Renvoi en cours...',
+    resendIn: 'Renvoyer dans',
+    resendSuccess: 'Code renvoyé. Vérifiez votre e-mail.',
+    verifyCodeInstruction: 'Saisissez le code envoyé à votre e-mail.',
+    verifyCodeLabel: 'Code de vérification',
+    verifyCodeButton: 'Vérifier le code',
+    verifyCodeSubmitting: 'Vérification...',
+    verifyCodeSuccess: 'Code vérifié avec succès. Vous pouvez maintenant vous connecter.',
+    verifyCodeError: 'Code invalide, expiré ou déjà utilisé.',
   },
 
   register: {
@@ -58,7 +66,7 @@ const fr: Translations = {
 
   verifyEmail: {
     title: 'Vérifiez votre e-mail',
-    subtitle: "Utilisez le lien de vérification envoyé pour finaliser votre compte.",
+    subtitle: 'Saisissez le code envoyé à votre e-mail.',
     codeLabel: 'Code de confirmation',
     codePlaceholder: '000000',
     submit: "Confirmer l'e-mail",
@@ -123,6 +131,7 @@ const fr: Translations = {
     doneSubtitle: 'Accédez au site avec votre e-mail et votre nouveau mot de passe.',
     goToLogin: 'Aller à la connexion',
     loading: 'Chargement...',
+    unavailable: 'La migration de compte est temporairement indisponible.',
     gameLoginInvalid: "Utilisez uniquement des lettres et des chiffres pour le nom d'utilisateur du jeu.",
     invalidCredentials: "Nom d'utilisateur ou mot de passe invalide.",
     alreadyMigrated: 'Ce compte a déjà été mis à jour. Accédez normalement au site ou utilisez la récupération de mot de passe.',

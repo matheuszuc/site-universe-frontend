@@ -62,6 +62,7 @@ const envSchema = z.object({
   GF_ACCOUNT_DB_NAME: z.string().min(1).default("gf_ls"),
   GF_DB_SSL: booleanStringSchema,
   GAME_DELIVERY_ENABLED: booleanStringSchema.default(false),
+  GAME_ACCOUNT_CREATION_ENABLED: booleanStringSchema.default(true),
   MERCADO_PAGO_ACCESS_TOKEN: z.string().optional(),
   MERCADO_PAGO_PUBLIC_KEY: z.string().optional(),
   MERCADO_PAGO_WEBHOOK_SECRET: z.string().optional(),

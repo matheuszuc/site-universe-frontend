@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type ReCAPTCHA from 'react-google-recaptcha'
@@ -34,8 +34,23 @@ export default function Login() {
   const [isResendingVerification, setIsResendingVerification] = useState(false)
   const [resendMessage, setResendMessage] = useState<string>()
   const [unverifiedEmail, setUnverifiedEmail] = useState<string>()
+  const [verificationCode, setVerificationCode] = useState('')
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
   const recaptchaRef = useRef<ReCAPTCHA>(null)
+
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return undefined
+    }
+
+    const timer = window.setInterval(() => {
+      setResendCooldown((current) => Math.max(current - 1, 0))
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [resendCooldown])
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -52,6 +67,7 @@ export default function Login() {
     setErrorMessage(undefined)
     setResendMessage(undefined)
     setUnverifiedEmail(undefined)
+    setVerificationCode('')
 
     if (isRecaptchaRequired() && !recaptchaToken) {
       setErrorMessage(t.auth.recaptchaRequired)
@@ -73,17 +89,51 @@ export default function Login() {
     }
   }
 
-  async function handleResendVerification() {
+  async function handleVerifyCode() {
     if (!unverifiedEmail) {
+      return
+    }
+
+    const code = verificationCode.trim()
+
+    if (!/^\d{6,8}$/.test(code)) {
+      setResendMessage(undefined)
+      setErrorMessage(t.login.verifyCodeError)
+      return
+    }
+
+    setIsVerifyingCode(true)
+    setResendMessage(undefined)
+    setErrorMessage(undefined)
+
+    try {
+      await authApi.verifyEmailCode(unverifiedEmail, code)
+      // E-mail confirmed: hide the verification area and let the user sign in again.
+      setUnverifiedEmail(undefined)
+      setVerificationCode('')
+      setResendMessage(t.login.verifyCodeSuccess)
+    } catch {
+      setErrorMessage(t.login.verifyCodeError)
+    } finally {
+      setIsVerifyingCode(false)
+    }
+  }
+
+  async function handleResendVerification() {
+    // Block parallel requests and clicks during the cooldown window so rapid
+    // clicking can never fire more than one request.
+    if (!unverifiedEmail || isResendingVerification || resendCooldown > 0) {
       return
     }
 
     setIsResendingVerification(true)
     setResendMessage(undefined)
+    setErrorMessage(undefined)
 
     try {
-      const result = await authApi.resendVerification(unverifiedEmail)
-      setResendMessage(result.message)
+      await authApi.resendVerification(unverifiedEmail)
+      setResendMessage(t.login.resendSuccess)
+      setResendCooldown(60)
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error))
     } finally {
@@ -146,15 +196,50 @@ export default function Login() {
             </LoadingButton>
 
             {unverifiedEmail && (
-              <LoadingButton
-                className="w-full"
-                isLoading={isResendingVerification}
-                loadingText={t.login.resending}
-                onClick={handleResendVerification}
-                type="button"
-              >
-                {t.login.resendEmail}
-              </LoadingButton>
+              <div className="space-y-3 rounded-lg border border-white/20 bg-white/5 p-4">
+                <p className="text-sm text-white/85">{t.login.verifyCodeInstruction}</p>
+
+                <div>
+                  <label className="auth-label" htmlFor="login-verification-code">
+                    {t.login.verifyCodeLabel}
+                  </label>
+                  <input
+                    autoComplete="one-time-code"
+                    className="min-h-12 w-full rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-center text-lg font-black tracking-[0.24em] text-white outline-none transition placeholder:text-white/35 focus:border-cyan-200"
+                    disabled={isVerifyingCode}
+                    id="login-verification-code"
+                    inputMode="numeric"
+                    maxLength={8}
+                    onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="000000"
+                    value={verificationCode}
+                  />
+                </div>
+
+                <LoadingButton
+                  className="w-full"
+                  disabled={isVerifyingCode || !verificationCode.trim()}
+                  isLoading={isVerifyingCode}
+                  loadingText={t.login.verifyCodeSubmitting}
+                  onClick={handleVerifyCode}
+                  type="button"
+                >
+                  {t.login.verifyCodeButton}
+                </LoadingButton>
+
+                <LoadingButton
+                  className="w-full"
+                  disabled={isResendingVerification || resendCooldown > 0}
+                  isLoading={isResendingVerification}
+                  loadingText={t.login.resending}
+                  onClick={handleResendVerification}
+                  type="button"
+                >
+                  {resendCooldown > 0
+                    ? `${t.login.resendIn} ${resendCooldown}s`
+                    : t.login.resendEmail}
+                </LoadingButton>
+              </div>
             )}
 
             <p className="text-center text-sm text-white/75">

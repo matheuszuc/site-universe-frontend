@@ -37,6 +37,14 @@ const enUS: Translations = {
     updateAccount: 'Update account',
     resendEmail: 'Resend email',
     resending: 'Resending...',
+    resendIn: 'Resend in',
+    resendSuccess: 'Code resent. Check your email.',
+    verifyCodeInstruction: 'Enter the code sent to your email.',
+    verifyCodeLabel: 'Verification code',
+    verifyCodeButton: 'Verify code',
+    verifyCodeSubmitting: 'Verifying...',
+    verifyCodeSuccess: 'Code verified successfully. You can now sign in.',
+    verifyCodeError: 'Invalid, expired, or already used code.',
   },
 
   register: {
@@ -58,7 +66,7 @@ const enUS: Translations = {
 
   verifyEmail: {
     title: 'Verify your email',
-    subtitle: 'Use the verification link sent to complete your account.',
+    subtitle: 'Enter the code sent to your email.',
     codeLabel: 'Confirmation code',
     codePlaceholder: '000000',
     submit: 'Confirm email',
@@ -123,6 +131,7 @@ const enUS: Translations = {
     doneSubtitle: 'Access the site with your email and new password.',
     goToLogin: 'Go to login',
     loading: 'Loading...',
+    unavailable: 'Account migration is temporarily unavailable.',
     gameLoginInvalid: 'Use only letters and numbers for the game username.',
     invalidCredentials: 'Invalid username or password.',
     alreadyMigrated: 'This account has already been updated. Access the site normally or use password recovery.',

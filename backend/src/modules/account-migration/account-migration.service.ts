@@ -6,6 +6,7 @@ import { normalizeEmail } from "../../utils/normalize-email.js";
 import { AppError } from "../../utils/safe-error.js";
 import { authService } from "../auth/auth.service.js";
 import { passwordService } from "../security/password.service.js";
+import { recaptchaService } from "../security/recaptcha.service.js";
 import { tokenService } from "../security/token.service.js";
 import {
   completeAccountMigrationSchema,
@@ -70,6 +71,22 @@ export class AccountMigrationService {
       input
     ) satisfies StartAccountMigrationInput;
     const gameLogin = normalizeGameLogin(parsedInput.gameLogin);
+
+    // Validate reCAPTCHA before touching the legacy game database. When the
+    // token is missing/invalid (and reCAPTCHA is enabled) this throws before any
+    // credential check, so bots cannot probe old logins.
+    try {
+      await recaptchaService.verify(parsedInput.recaptchaToken);
+    } catch (error) {
+      await this.recordAudit({
+        eventType: "ACCOUNT_MIGRATION_START_REJECTED_RECAPTCHA",
+        success: false,
+        reason: "recaptcha_failed",
+        gameLogin,
+        requestInfo
+      });
+      throw error;
+    }
 
     if (await this.findMigratedGameAccountByLogin(gameLogin)) {
       await this.recordAudit({

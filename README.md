@@ -132,7 +132,8 @@ rank_3=60047, rank_4=60048, rank_5=60049, rank_6=60050.
 - O MD5 da senha digitada é aceito se bater com `gf_ls.accounts.password`, `gf_ms.tb_user.password` ou `gf_ms.tb_user.pwd`.
 - Se a conta for validada, o backend cria uma sessão temporária em cookie httpOnly, com expiração configurada em `ACCOUNT_MIGRATION_SESSION_TTL_MINUTES`.
 - A segunda etapa usa `POST /api/account-migration/complete` para cadastrar e-mail e nova senha no Site Universe.
-- A nova senha precisa ter no mínimo 8 caracteres, letra maiúscula, letra minúscula, número e caractere especial.
+- A nova senha do site segue a regra GF: apenas letras minúsculas e números, mínimo 10 caracteres (sem maiúsculas/símbolos), igual ao registro.
+- A etapa inicial da migração (`/api/account-migration/start`) valida reCAPTCHA quando `RECAPTCHA_ENABLED=true`; o frontend usa o mesmo `RecaptchaWidget` do Login/Registro e envia `recaptchaToken`.
 - Ao concluir, a senha do Site Universe é salva com o hash moderno do backend; MD5 é usado somente para compatibilidade com o Grand Fantasia.
 - O backend atualiza `gf_ms.tb_user.password`, `gf_ms.tb_user.pwd` e `gf_ls.accounts.password` com o mesmo MD5 da nova senha.
 - O backend não altera `gf_ls.accounts.charpassword`, `use_charpassword`, `pvalues`, `bonus`, AP/P ou itens.
@@ -311,8 +312,24 @@ npm run game-deliveries:process
 - O frontend não salva token, não usa JWT e não lê cookie httpOnly.
 - A sessão real é validada com `GET /auth/me`.
 - Logout chama `GET /auth/csrf` e depois `POST /auth/logout` com `X-CSRF-Token`.
-- Tokens de verificação e reset são enviados por link e salvos no backend apenas como hash.
-- Em desenvolvimento, o backend mostra links de e-mail/reset no console. Em produção, configure um provedor real de e-mail.
+- A verificação de e-mail é por **código manual** enviado via Resend; o e-mail não contém link clicável (evita link quebrado por porta/domínio errado em local/staging). O usuário digita o código na tela `/verify-email`.
+- O código é salvo apenas como hash, expira em `EMAIL_VERIFICATION_EXPIRES_MINUTES`, é de uso único, limita tentativas (incremento atômico) e o reenvio tem cooldown + rate limit.
+- O reset de senha continua por link (token salvo como hash).
+- Em desenvolvimento (`EMAIL_PROVIDER=console`), o backend imprime o código no console; em produção use `EMAIL_PROVIDER=resend` com `RESEND_API_KEY`.
+- O endpoint `GET /auth/verify-email?token=` ainda existe por compatibilidade, mas não é necessário: a verificação funciona somente com o código.
+
+### Conta nova cria conta no jogo (GF)
+
+- No registro (`POST /auth/register`), o nome de usuário informado é o login do jogo (`mid`).
+- O backend cria primeiro a conta GF (`gf_ms.tb_user` + `gf_ls.accounts`), obtém o `idnum` gerado pelo banco e só então cria o usuário do site + o vínculo `game_accounts` (status `linked`), numa transação.
+- A senha do site é salva com Argon2id; a senha do jogo é salva como MD5 apenas nos bancos GF (compatibilidade de login no jogo). O site nunca guarda MD5.
+- `pvalues` inicial = 0. `idnum` é auto-gerado por `nextval('tb_user_idnum_seq')` no GF.
+- Login/`mid` duplicado no GF é bloqueado (sem sobrescrever). E-mail duplicado no site é bloqueado.
+- Se a criação GF falhar (banco GF indisponível), o registro falha com erro amigável e o usuário do site não é criado — sem estado inconsistente.
+- Controle por `GAME_ACCOUNT_CREATION_ENABLED` (padrão `true`). `false` é apenas para dev sem acesso ao GF: cria só o usuário do site e registra `REGISTER_CREATED_WITHOUT_GAME_ACCOUNT`. Não usar `false` em staging/produção.
+- Login no site continua por e-mail; login no jogo continua pelo `mid`/senha do jogo.
+- A compra de Unicoin continua bloqueada enquanto `emailVerifiedAt` estiver vazio (`403 EMAIL_NOT_VERIFIED`), tanto para conta nova quanto migrada.
+- Conta antiga continua usando `/atualizar-conta`: valida as credenciais antigas, **não cria nova conta GF**, e vincula a conta GF existente ao usuário do site.
 
 ## Rotas principais
 

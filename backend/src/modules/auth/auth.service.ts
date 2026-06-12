@@ -2,10 +2,11 @@ import { randomInt } from "node:crypto";
 
 import type { User } from "@prisma/client";
 
-import { env } from "../../config/env.js";
+import { env, isProduction } from "../../config/env.js";
 import { getSessionCookieOptions } from "../../config/cookies.js";
 import { prisma } from "../../database/prisma.js";
 import { normalizeEmail } from "../../utils/normalize-email.js";
+import { gfLegacyAuthService } from "../account-migration/gf-legacy-auth.service.js";
 import { emailService } from "../email/email.service.js";
 import { sessionsService } from "../sessions/sessions.service.js";
 import { csrfService } from "../security/csrf.service.js";
@@ -135,31 +136,156 @@ function generateVerificationCode(length: number) {
   return String(randomInt(min, max));
 }
 
+function normalizeGameLogin(gameLogin: string) {
+  return gameLogin.trim();
+}
+
+// Safe diagnostic log for the verification-resend flow. Never logs code, hash,
+// token, password, secret or cookie. The e-mail is included only outside
+// production to help dev/staging debugging.
+function logResendEvent(event: string, emailNormalized?: string) {
+  if (isProduction || !emailNormalized) {
+    console.info(`[auth] ${event}`);
+    return;
+  }
+
+  console.info(`[auth] ${event}`, { email: emailNormalized });
+}
+
+// Block trivially guessable passwords equal to the login or e-mail.
+function passwordMatchesIdentifier(password: string, login: string, email: string): boolean {
+  const localPart = (email.split("@")[0] ?? "").toLowerCase();
+  const normalizedPassword = password.toLowerCase();
+
+  return (
+    normalizedPassword === login.toLowerCase() ||
+    normalizedPassword === email.toLowerCase() ||
+    normalizedPassword === localPart
+  );
+}
+
 export class AuthService {
   async register(input: unknown, requestInfo: RequestInfo): Promise<AuthenticatedUser> {
     const parsedInput = registerSchema.parse(input) satisfies RegisterInput;
     await recaptchaService.verify(parsedInput.recaptchaToken);
     const emailNormalized = normalizeEmail(parsedInput.email);
+    const gameLogin = normalizeGameLogin(parsedInput.name);
     const existingUser = await usersRepository.findByNormalizedEmail(emailNormalized);
 
     if (existingUser) {
       throw new AppError(409, "CONFLICT", "Não foi possível criar a conta.");
     }
 
-    const passwordHash = await passwordService.hashPassword(parsedInput.password);
-    const user = await usersRepository.create({
-      name: parsedInput.name,
-      email: emailNormalized,
-      emailNormalized,
-      passwordHash,
-      role: "USER",
-      status: "pending_verification",
-      emailVerifiedAt: null
+    // Reject if this game login is already linked to a site account.
+    const existingGameAccount = await prisma.gameAccount.findUnique({
+      where: { gameLogin }
     });
+
+    if (existingGameAccount) {
+      throw new AppError(409, "CONFLICT", "Não foi possível criar a conta.");
+    }
+
+    if (passwordMatchesIdentifier(parsedInput.password, gameLogin, emailNormalized)) {
+      throw new AppError(400, "BAD_REQUEST", "A senha não pode ser igual ao seu login ou e-mail.");
+    }
+
+    // Create the game account in the GF databases first: it is the source of the
+    // numeric idnum and enforces login uniqueness at the game side. The site user
+    // is only created after the game account exists, so a site account never ends
+    // up without a matching game account.
+    let createdGfAccount: Awaited<ReturnType<typeof gfLegacyAuthService.createGameAccount>> | null =
+      null;
+
+    if (env.GAME_ACCOUNT_CREATION_ENABLED) {
+      await securityEventsService.record({
+        eventType: "REGISTER_GAME_ACCOUNT_CREATE_ATTEMPT",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent,
+        metadata: { gameLogin }
+      });
+
+      try {
+        createdGfAccount = await gfLegacyAuthService.createGameAccount({
+          gameLogin,
+          password: parsedInput.password
+        });
+      } catch (error) {
+        await securityEventsService.record({
+          eventType: "REGISTER_GAME_ACCOUNT_CREATE_FAILED",
+          ip: requestInfo.ip,
+          userAgent: requestInfo.userAgent,
+          metadata: {
+            gameLogin,
+            reason: error instanceof AppError ? error.code : "unexpected_error"
+          }
+        });
+        throw error;
+      }
+
+      await securityEventsService.record({
+        eventType: "REGISTER_GAME_ACCOUNT_CREATED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent,
+        metadata: { gameLogin, gameAccountId: createdGfAccount.gameAccountId }
+      });
+    }
+
+    const passwordHash = await passwordService.hashPassword(parsedInput.password);
+    let user: User;
+
+    try {
+      user = await prisma.$transaction(async (tx) => {
+        const now = new Date();
+        const createdUser = await tx.user.create({
+          data: {
+            name: gameLogin,
+            email: emailNormalized,
+            emailNormalized,
+            passwordHash,
+            role: "USER",
+            status: "pending_verification",
+            emailVerifiedAt: null
+          }
+        });
+
+        if (createdGfAccount) {
+          await tx.gameAccount.create({
+            data: {
+              userId: createdUser.id,
+              gameLogin: createdGfAccount.gameLogin,
+              gameAccountId: createdGfAccount.gameAccountId,
+              status: "linked",
+              linkedAt: now,
+              verifiedAt: now,
+              migratedAt: null,
+              requiresEmailVerification: true,
+              requiresPasswordUpdate: false
+            }
+          });
+        }
+
+        return createdUser;
+      });
+    } catch (error) {
+      // The GF account may already exist; the site user could not be persisted.
+      // Record a reconciliation marker (no secrets) so support can resolve it.
+      await securityEventsService.record({
+        eventType: createdGfAccount
+          ? "REGISTER_LOCAL_CREATE_FAILED_AFTER_GF"
+          : "REGISTER_LOCAL_CREATE_FAILED",
+        ip: requestInfo.ip,
+        userAgent: requestInfo.userAgent,
+        metadata: {
+          gameLogin,
+          gameAccountId: createdGfAccount?.gameAccountId ?? null
+        }
+      });
+      throw error;
+    }
 
     await securityEventsService.record({
       userId: user.id,
-      eventType: "REGISTER_CREATED",
+      eventType: createdGfAccount ? "REGISTER_CREATED" : "REGISTER_CREATED_WITHOUT_GAME_ACCOUNT",
       ip: requestInfo.ip,
       userAgent: requestInfo.userAgent
     });
@@ -172,12 +298,24 @@ export class AuthService {
   async resendVerification(input: unknown, requestInfo: RequestInfo): Promise<SuccessResponse> {
     const parsedInput = emailOnlySchema.parse(input) satisfies EmailOnlyInput;
     const emailNormalized = normalizeEmail(parsedInput.email);
+    logResendEvent("verification email resend requested", emailNormalized);
     const user = await usersService.findByEmail(emailNormalized);
 
     if (user && !user.emailVerifiedAt && !isBlockedUserStatus(user.status)) {
-      await this.requestEmailVerificationForUser(user, requestInfo, {
+      const sent = await this.requestEmailVerificationForUser(user, requestInfo, {
         enforceCooldown: true
       });
+
+      logResendEvent(
+        sent
+          ? "verification email resend sent"
+          : "verification email resend blocked by cooldown",
+        emailNormalized
+      );
+    } else {
+      // No pending user (not found, already verified, or blocked). Response stays
+      // generic so the caller cannot tell whether the e-mail exists.
+      logResendEvent("verification email resend ignored (generic response)");
     }
 
     return emailVerificationGenericResponse;
@@ -682,11 +820,13 @@ export class AuthService {
     throw emailNotVerifiedError;
   }
 
+  // Returns true when a new verification e-mail was actually sent, false when the
+  // resend was throttled by the backend cooldown / hourly cap.
   async requestEmailVerificationForUser(
     user: User,
     requestInfo: RequestInfo,
     options: { enforceCooldown?: boolean } = {}
-  ) {
+  ): Promise<boolean> {
     if (options.enforceCooldown) {
       const cooldownDate = addSeconds(
         new Date(),
@@ -713,17 +853,15 @@ export class AuthService {
       ]);
 
       if (recentToken || hourlyCount >= env.EMAIL_VERIFICATION_MAX_PER_HOUR) {
-        return;
+        return false;
       }
     }
 
     const verification = await this.createEmailVerificationToken(user, requestInfo);
-    const verificationLink = buildFrontendLink("/verificar-email", verification.token);
 
     await emailService.sendVerificationEmail({
       email: user.email,
       verificationCode: verification.code,
-      verificationLink,
       expiresInMinutes: env.EMAIL_VERIFICATION_EXPIRES_MINUTES
     });
     await securityEventsService.record({
@@ -732,6 +870,8 @@ export class AuthService {
       ip: requestInfo.ip,
       userAgent: requestInfo.userAgent
     });
+
+    return true;
   }
 
   private async createEmailVerificationToken(user: User, requestInfo: RequestInfo) {

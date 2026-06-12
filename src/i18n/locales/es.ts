@@ -37,6 +37,14 @@ const es: Translations = {
     updateAccount: 'Actualizar cuenta',
     resendEmail: 'Reenviar correo',
     resending: 'Reenviando...',
+    resendIn: 'Reenviar en',
+    resendSuccess: 'Código reenviado. Revisa tu correo.',
+    verifyCodeInstruction: 'Introduce el código enviado a tu correo electrónico.',
+    verifyCodeLabel: 'Código de verificación',
+    verifyCodeButton: 'Verificar código',
+    verifyCodeSubmitting: 'Verificando...',
+    verifyCodeSuccess: 'Código verificado correctamente. Ahora puedes iniciar sesión.',
+    verifyCodeError: 'Código inválido, expirado o ya utilizado.',
   },
 
   register: {
@@ -58,7 +66,7 @@ const es: Translations = {
 
   verifyEmail: {
     title: 'Verifica tu correo electrónico',
-    subtitle: 'Usa el enlace de verificación enviado para completar tu cuenta.',
+    subtitle: 'Introduce el código enviado a tu correo electrónico.',
     codeLabel: 'Código de confirmación',
     codePlaceholder: '000000',
     submit: 'Confirmar correo',
@@ -123,6 +131,7 @@ const es: Translations = {
     doneSubtitle: 'Accede al sitio con tu correo y nueva contraseña.',
     goToLogin: 'Ir al inicio de sesión',
     loading: 'Cargando...',
+    unavailable: 'La migración de cuentas está temporalmente no disponible.',
     gameLoginInvalid: 'Usa solo letras y números para el usuario del juego.',
     invalidCredentials: 'Usuario o contraseña inválidos.',
     alreadyMigrated: 'Esta cuenta ya fue actualizada. Accede al sitio normalmente o usa la recuperación de contraseña.',

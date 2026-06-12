@@ -11,7 +11,10 @@ import {
   startAccountMigrationController
 } from "./account-migration.controller.js";
 
-function requireMigrationEnabled(_req: FastifyRequest, _reply: FastifyReply) {
+// Must be async: a sync 2-arg preHandler that returns undefined is treated by
+// Fastify as callback-style and waits forever for a `done` that never fires,
+// which hangs every migration route. Async hooks resolve/reject normally.
+async function requireMigrationEnabled(_req: FastifyRequest, _reply: FastifyReply) {
   if (!env.ACCOUNT_MIGRATION_ENABLED) {
     throw new AppError(403, "MIGRATION_DISABLED", "Migração de conta encerrada.");
   }

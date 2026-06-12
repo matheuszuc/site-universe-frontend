@@ -15,6 +15,9 @@ export type Translations = {
     title: string; subtitle: string; forgotPassword: string
     submit: string; submitting: string; noAccount: string; signUp: string
     oldAccount: string; updateAccount: string; resendEmail: string; resending: string
+    resendIn: string; resendSuccess: string
+    verifyCodeInstruction: string; verifyCodeLabel: string; verifyCodeButton: string
+    verifyCodeSubmitting: string; verifyCodeSuccess: string; verifyCodeError: string
   }
   register: {
     title: string; subtitle: string; usernameLabel: string; usernamePlaceholder: string
@@ -47,6 +50,7 @@ export type Translations = {
     newPasswordPlaceholder: string; confirmPasswordLabel: string
     confirmPasswordPlaceholder: string; finish: string; finishing: string
     doneTitle: string; doneSubtitle: string; goToLogin: string; loading: string
+    unavailable: string
     gameLoginInvalid: string; invalidCredentials: string; alreadyMigrated: string
     weakPassword: string; passwordsNotMatch: string; passwordRequirementsTitle: string
     passwordRuleMin: string; passwordRuleLower: string; passwordRuleDigits: string
@@ -168,6 +172,14 @@ const ptBR: Translations = {
     updateAccount: 'Atualizar conta',
     resendEmail: 'Reenviar e-mail',
     resending: 'Reenviando...',
+    resendIn: 'Reenviar em',
+    resendSuccess: 'Código reenviado. Verifique seu e-mail.',
+    verifyCodeInstruction: 'Digite o código enviado para seu e-mail.',
+    verifyCodeLabel: 'Código de verificação',
+    verifyCodeButton: 'Verificar código',
+    verifyCodeSubmitting: 'Verificando...',
+    verifyCodeSuccess: 'Código verificado com sucesso. Agora você já pode fazer login.',
+    verifyCodeError: 'Código inválido, expirado ou já utilizado.',
   },
 
   register: {
@@ -189,7 +201,7 @@ const ptBR: Translations = {
 
   verifyEmail: {
     title: 'Verifique seu e-mail',
-    subtitle: 'Use o link de verificação enviado para concluir sua conta.',
+    subtitle: 'Digite o código enviado para seu e-mail.',
     codeLabel: 'Código de confirmação',
     codePlaceholder: '000000',
     submit: 'Confirmar e-mail',
@@ -254,6 +266,7 @@ const ptBR: Translations = {
     doneSubtitle: 'Acesse o site com seu e-mail e nova senha.',
     goToLogin: 'Ir para o login',
     loading: 'Carregando...',
+    unavailable: 'A migração de contas está temporariamente indisponível.',
     gameLoginInvalid: 'Use apenas letras e números no usuário do jogo.',
     invalidCredentials: 'Usuário ou senha inválidos.',
     alreadyMigrated: 'Esta conta já foi atualizada. Acesse o site normalmente ou use a recuperação de senha.',
