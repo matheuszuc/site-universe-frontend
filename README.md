@@ -27,10 +27,12 @@ Não inclui Stripe, Banco Inter, carrinho, painel admin, OAuth, 2FA/MFA ou prove
 - `GET /orders` lista somente os últimos pedidos do usuário logado, sem aceitar `userId` do frontend.
 - A tela de Histórico/Atividades mostra pedidos reais de AP e estado vazio quando não houver pedidos.
 - O painel mostra saldo AP a partir de `/users/me/dashboard`.
-- O Mercado Pago Pix fica habilitado somente em modo sandbox quando as variáveis do provider estiverem configuradas no backend.
-- Se a cobranca Pix for criada via Mercado Pago Orders API, `POST /orders` retorna apenas dados publicos do Pix, como `pix.pixCopiaECola`, `pix.qrCodeImage`, `pix.status`, `order.orderNumber` e `pix.expiresAt`; caso contrario, o pedido fica pendente e a UI mostra pagamento Pix indisponivel.
+- O Site Universe aceita **somente Pix**, via **OpenPix/Woovi** (`PAYMENT_PROVIDER=openpix`). Não há cartão, boleto nem seletor de método. O método oficial é sempre Pix, definido no backend.
+- A cobrança Pix fica habilitada quando `OPENPIX_APP_ID` e `OPENPIX_BASE_URL` estão configurados no backend. Em produção, a ausência de `OPENPIX_APP_ID` derruba o startup.
+- Quando a cobrança Pix é criada na OpenPix, `POST /orders` retorna apenas dados públicos do Pix, como `pix.pixCopiaECola` (copia e cola), `pix.qrCodeImage` (QR Code), `pix.status`, `order.orderNumber` e `pix.expiresAt`; caso contrário, o pedido fica pendente e a UI mostra pagamento Pix indisponível.
+- O `correlationID` da cobrança OpenPix é sempre o `orderNumber` interno, usado para reconciliar o webhook ao pedido local sem confiar no cliente.
 - `GET /orders/:orderNumber/status` permite ao usuário atualizar o status do próprio pedido; a confirmação continua sendo server-to-server no backend.
-- O webhook público `POST /webhooks/mercado-pago` valida a assinatura recebida, consulta o pagamento server-to-server e só então chama `approvePaymentFromVerifiedWebhook`.
+- O webhook público `POST /webhooks/openpix` valida (opcionalmente) a assinatura HMAC (`x-openpix-signature`), reconsulta a cobrança server-to-server na OpenPix e só então chama `approvePaymentFromVerifiedWebhook`. Eventos que não sejam Pix pago não aprovam nada.
 - A aprovacao de pagamento fica somente na funcao interna `approvePaymentFromVerifiedWebhook`, após validação real do provider.
 - Compras aprovadas no Site Universe somam AP ao ciclo ativo da escala por `user_reward_cycle_progress_events`.
 - Compras aprovadas tambem criam `game_deliveries` do tipo `CREDIT_AP` para credito em `gf_ms.tb_user.pvalues`.
@@ -56,8 +58,8 @@ A moeda publica e Unicoin; nomes internos como `up_amount`, `reward_amount`,
 ### Responsabilidades
 
 - O **backend** recebe o webhook, valida assinatura/status/valor server-to-server
-  no Mercado Pago e so entao chama a transacao interna. Nenhuma chamada HTTP ou ao
-  Mercado Pago acontece dentro do banco.
+  na OpenPix e so entao chama a transacao interna. Nenhuma chamada HTTP ou a
+  OpenPix acontece dentro da transacao do banco.
 - O **PostgreSQL** garante a consistencia final via transacoes Prisma com
   `SELECT ... FOR UPDATE` e indices unicos. Nao ha funcao PL/pgSQL: a atomicidade
   ja e garantida pelos locks de linha + constraints, sem fragmentar a logica de
@@ -102,9 +104,9 @@ rank_3=60047, rank_4=60048, rank_5=60049, rank_6=60050.
 ### Como testar idempotencia/concorrencia (manual)
 
 1. Crie um pedido Pix com usuario verificado e simule aprovacao
-   (`/webhooks/mercado-pago` ou simulador dev). Confirme **um** credito e **uma**
+   (`/webhooks/openpix` ou simulador dev). Confirme **um** credito e **uma**
    `game_deliveries`.
-2. Reenvie o mesmo webhook (mesmo `eventId`/`dataId`): a resposta deve ser
+2. Reenvie o mesmo webhook (mesmo `eventId`): a resposta deve ser
    `replay`/`alreadyApproved`, sem segundo credito.
 3. Dispare dois webhooks em paralelo para o mesmo pagamento: apenas um credita;
    o outro retorna idempotente (garantido por `FOR UPDATE` +
@@ -243,7 +245,13 @@ GF_DB_SSL=false
 GAME_DELIVERY_ENABLED=false
 ```
 
-As variáveis do provider Pix ficam documentadas apenas em `backend/.env.example`, sem valores reais. Não coloque valores reais de segredo no repositório.
+As variáveis do provider Pix (OpenPix) ficam documentadas apenas em `backend/.env.example`, sem valores reais — `PAYMENT_PROVIDER`, `OPENPIX_APP_ID`, `OPENPIX_BASE_URL`, `OPENPIX_ENV` e `OPENPIX_WEBHOOK_SECRET`. Não coloque valores reais de segredo no repositório e nunca exponha o `OPENPIX_APP_ID` no frontend (sem prefixo `VITE_`). O sistema aceita **somente Pix**.
+
+#### Webhook OpenPix
+
+- Configure no painel da OpenPix/Woovi o webhook para `POST {APP_PUBLIC_API}/webhooks/openpix`.
+- Opcionalmente defina `OPENPIX_WEBHOOK_SECRET` para validação HMAC do corpo (`x-openpix-signature`). Sem o segredo, a aprovação ainda é segura porque o backend reconsulta a cobrança server-to-server antes de liberar Unicoin/entrega.
+- Teste de Pix em sandbox: defina `OPENPIX_ENV=sandbox` com um `OPENPIX_APP_ID` de teste, crie um pedido na loja, pague o QR Code/copia e cola de sandbox e confirme que o webhook credita o Unicoin uma única vez.
 
 ### Resend em desenvolvimento
 
@@ -375,7 +383,7 @@ Backend Loja e Recompensas:
 - `GET /orders`
 - `GET /orders/:orderNumber/status`
 - `POST /orders`
-- `POST /webhooks/mercado-pago`
+- `POST /webhooks/openpix`
 
 Backend Atualização de Conta Antiga:
 

@@ -16,7 +16,7 @@ import {
   idempotencyKeySchema
 } from "../idempotency/idempotency.utils.js";
 import { recordPaymentAudit, type AuditRequestInfo } from "../payments/audit.service.js";
-import { mercadoPagoPixService } from "../payments/providers/mercado-pago-pix.service.js";
+import { openPixPixService } from "../payments/providers/openpix-pix.service.js";
 import { userRewardCycleService } from "../rewards/reward-cycle.service.js";
 import { storePackageService } from "../store/store.service.js";
 import { gameDeliveryService } from "../game-delivery/game-delivery.service.js";
@@ -314,8 +314,8 @@ export class OrdersService {
             orderId: order.id,
             userId: user.id,
             status: "pending",
-            provider: mercadoPagoPixService.isEnabled()
-              ? mercadoPagoPixService.provider
+            provider: openPixPixService.isEnabled()
+              ? openPixPixService.provider
               : futurePaymentProvider,
             amountCents: storePackage.priceCents,
             currency: storePackage.currency
@@ -329,7 +329,7 @@ export class OrdersService {
             paymentId: payment.id
           }
         });
-        const pixPayment = await mercadoPagoPixService.createPixPayment({
+        const pixPayment = await openPixPixService.createPixPayment({
           orderId: order.id,
           orderNumber: order.orderNumber,
           amountCents: storePackage.priceCents,
@@ -344,7 +344,7 @@ export class OrdersService {
                 id: payment.id
               },
               data: {
-                provider: mercadoPagoPixService.provider,
+                provider: openPixPixService.provider,
                 providerPaymentId: pixPayment.providerPaymentId,
                 providerEventId: pixPayment.providerTransactionId,
                 rawProviderStatus: pixPayment.status,
@@ -364,7 +364,7 @@ export class OrdersService {
               data: {
                 metadata: {
                   source: "frontend_order_create",
-                  pixProvider: mercadoPagoPixService.provider,
+                  pixProvider: openPixPixService.provider,
                   pixProviderPaymentId: pixPayment.providerPaymentId,
                   pixExpiresAt: toIsoDate(pixPayment.expiresAt)
                 }
@@ -885,15 +885,14 @@ export class OrdersService {
 
     if (
       order.status === "pending_payment" &&
-      order.payment?.provider === mercadoPagoPixService.provider &&
+      order.payment?.provider === openPixPixService.provider &&
       order.payment.providerPaymentId &&
-      mercadoPagoPixService.isEnabled()
+      openPixPixService.isEnabled()
     ) {
-      const providerPayment = await mercadoPagoPixService.getProviderOrder(order.payment.providerPaymentId);
+      const providerPayment = await openPixPixService.getProviderOrder(order.payment.providerPaymentId);
 
       if (
-        providerPayment.status === "processed" &&
-        (!providerPayment.statusDetail || providerPayment.statusDetail === "accredited") &&
+        providerPayment.status === "approved" &&
         providerPayment.amountCents === order.amountCents &&
         providerPayment.currency === order.currency
       ) {
@@ -901,11 +900,11 @@ export class OrdersService {
           paymentId: order.payment.id,
           providerPaymentId: providerPayment.providerPaymentId,
           providerEventId: `status_poll:${providerPayment.providerPaymentId}`,
-          rawProviderStatus: providerPayment.status,
+          rawProviderStatus: providerPayment.statusDetail ?? providerPayment.status,
           providerPayloadHash: hashRequest(providerPayment),
           requestId: requestInfo.requestId,
           metadata: {
-            provider: mercadoPagoPixService.provider,
+            provider: openPixPixService.provider,
             source: "user_status_poll",
             providerPaymentId: providerPayment.providerPaymentId,
             statusDetail: providerPayment.statusDetail
@@ -917,7 +916,7 @@ export class OrdersService {
           id: order.payment.id
         },
         data: {
-            rawProviderStatus: providerPayment.status,
+            rawProviderStatus: providerPayment.statusDetail ?? providerPayment.status,
             providerPayloadHash: hashRequest(providerPayment)
         }
       });

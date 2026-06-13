@@ -2,7 +2,7 @@ import { sessionCookieName } from "../../config/cookies.js";
 import { env } from "../../config/env.js";
 import { AppError } from "../../utils/safe-error.js";
 import { authCookieSchema } from "../auth/auth.schemas.js";
-import { mercadoPagoPixService } from "../payments/providers/mercado-pago-pix.service.js";
+import { openPixPixService } from "../payments/providers/openpix-pix.service.js";
 import { securityEventsService } from "../security/security-events.service.js";
 import { sessionsService } from "../sessions/sessions.service.js";
 import { dashboardRepository, type SafeActivityType } from "./dashboard.repository.js";
@@ -147,7 +147,7 @@ export class DashboardService {
         shopEnabled: true,
         rewardsEnabled: true,
         gameIntegrationEnabled: false,
-        paymentsEnabled: mercadoPagoPixService.isEnabled()
+        paymentsEnabled: openPixPixService.isEnabled()
       },
       balances: apSummary,
       activity
