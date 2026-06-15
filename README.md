@@ -27,10 +27,12 @@ Não inclui Stripe, Banco Inter, carrinho, painel admin, OAuth, 2FA/MFA ou prove
 - `GET /orders` lista somente os últimos pedidos do usuário logado, sem aceitar `userId` do frontend.
 - A tela de Histórico/Atividades mostra pedidos reais de AP e estado vazio quando não houver pedidos.
 - O painel mostra saldo AP a partir de `/users/me/dashboard`.
-- O Mercado Pago Pix fica habilitado somente em modo sandbox quando as variáveis do provider estiverem configuradas no backend.
-- Se a cobranca Pix for criada via Mercado Pago Orders API, `POST /orders` retorna apenas dados publicos do Pix, como `pix.pixCopiaECola`, `pix.qrCodeImage`, `pix.status`, `order.orderNumber` e `pix.expiresAt`; caso contrario, o pedido fica pendente e a UI mostra pagamento Pix indisponivel.
+- O Site Universe aceita **somente Pix**, via **Asaas** (`PAYMENT_PROVIDER=asaas`). Não há cartão, boleto, link com múltiplos métodos nem seletor de método. O método oficial é sempre Pix (`billingType=PIX`), definido no backend.
+- A cobrança Pix fica habilitada quando `ASAAS_ACCESS_TOKEN` e `ASAAS_BASE_URL` estão configurados no backend. Em produção, a ausência de `ASAAS_ACCESS_TOKEN` derruba o startup.
+- Quando a cobrança Pix é criada no Asaas, `POST /orders` retorna apenas dados públicos do Pix, como `pix.pixCopiaECola` (copia e cola), `pix.qrCodeImage` (QR Code), `pix.status`, `order.orderNumber` e `pix.expiresAt`; caso contrário, o pedido fica pendente e a UI mostra pagamento Pix indisponível.
+- O `externalReference` da cobrança Asaas é sempre o `orderNumber` interno, usado para reconciliar o webhook ao pedido local sem confiar no cliente.
 - `GET /orders/:orderNumber/status` permite ao usuário atualizar o status do próprio pedido; a confirmação continua sendo server-to-server no backend.
-- O webhook público `POST /webhooks/mercado-pago` valida a assinatura recebida, consulta o pagamento server-to-server e só então chama `approvePaymentFromVerifiedWebhook`.
+- O webhook público `POST /webhooks/asaas` valida o header `asaas-access-token` (quando `ASAAS_WEBHOOK_TOKEN` está configurado), reconsulta a cobrança server-to-server no Asaas e só então chama `approvePaymentFromVerifiedWebhook`. Eventos que não sejam Pix recebido/confirmado não aprovam nada.
 - A aprovacao de pagamento fica somente na funcao interna `approvePaymentFromVerifiedWebhook`, após validação real do provider.
 - Compras aprovadas no Site Universe somam AP ao ciclo ativo da escala por `user_reward_cycle_progress_events`.
 - Compras aprovadas tambem criam `game_deliveries` do tipo `CREDIT_AP` para credito em `gf_ms.tb_user.pvalues`.
@@ -243,7 +245,14 @@ GF_DB_SSL=false
 GAME_DELIVERY_ENABLED=false
 ```
 
-As variáveis do provider Pix ficam documentadas apenas em `backend/.env.example`, sem valores reais. Não coloque valores reais de segredo no repositório.
+As variáveis do provider Pix (Asaas) ficam documentadas apenas em `backend/.env.example`, sem valores reais — `PAYMENT_PROVIDER`, `ASAAS_ACCESS_TOKEN`, `ASAAS_BASE_URL`, `ASAAS_ENV`, `ASAAS_WEBHOOK_TOKEN` e `ASAAS_PIX_DUE_DAYS`. Não coloque valores reais de segredo no repositório e nunca exponha o `ASAAS_ACCESS_TOKEN`/`ASAAS_WEBHOOK_TOKEN` no frontend (sem prefixo `VITE_`). O sistema aceita **somente Pix**.
+
+#### Webhook e teste de Pix (Asaas)
+
+- Configure no painel do Asaas o webhook para `POST {APP_PUBLIC_API}/webhooks/asaas` e defina o mesmo token em `ASAAS_WEBHOOK_TOKEN`. O Asaas envia esse token no header `asaas-access-token`; sem token correto o webhook é recusado (403).
+- A autenticação das chamadas à API usa o header `access_token` (não `Authorization: Bearer`).
+- Teste de Pix em sandbox: defina `ASAAS_ENV=sandbox`, `ASAAS_BASE_URL=https://api-sandbox.asaas.com/v3` e um `ASAAS_ACCESS_TOKEN` de teste; crie um pedido na loja, pague o QR Code/copia e cola de sandbox e confirme que o webhook credita o Unicoin uma única vez.
+- **Pendência de produção:** o Asaas exige `cpfCnpj` para criar o customer. O site ainda não coleta CPF/CNPJ — o fluxo envia o customer sem esse campo e o Asaas rejeitará em produção até que o CPF/CNPJ passe a ser coletado no cadastro/checkout.
 
 ### Resend em desenvolvimento
 
@@ -375,7 +384,7 @@ Backend Loja e Recompensas:
 - `GET /orders`
 - `GET /orders/:orderNumber/status`
 - `POST /orders`
-- `POST /webhooks/mercado-pago`
+- `POST /webhooks/asaas`
 
 Backend Atualização de Conta Antiga:
 

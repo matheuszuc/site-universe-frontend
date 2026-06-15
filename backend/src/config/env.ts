@@ -8,11 +8,6 @@ const booleanStringSchema = z
   .optional()
   .transform((value) => value === "true");
 
-const optionalEmailStringSchema = z.preprocess(
-  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
-  z.string().trim().email().optional()
-);
-
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
@@ -63,14 +58,17 @@ const envSchema = z.object({
   GF_DB_SSL: booleanStringSchema,
   GAME_DELIVERY_ENABLED: booleanStringSchema.default(false),
   GAME_ACCOUNT_CREATION_ENABLED: booleanStringSchema.default(true),
-  MERCADO_PAGO_ACCESS_TOKEN: z.string().optional(),
-  MERCADO_PAGO_PUBLIC_KEY: z.string().optional(),
-  MERCADO_PAGO_WEBHOOK_SECRET: z.string().optional(),
-  MERCADO_PAGO_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
-  MERCADO_PAGO_TEST_PAYER_EMAIL: optionalEmailStringSchema,
-  PAYMENT_SUCCESS_URL: z.string().url().optional(),
-  PAYMENT_FAILURE_URL: z.string().url().optional(),
-  PAYMENT_PENDING_URL: z.string().url().optional()
+  // Provedor de pagamento Pix. O Site Universe aceita SOMENTE Pix, via Asaas.
+  // Mercado Pago, Banco Inter e OpenPix NAO sao usados.
+  PAYMENT_PROVIDER: z.enum(["asaas"]).default("asaas"),
+  // ASAAS_ACCESS_TOKEN e ASAAS_WEBHOOK_TOKEN sao segredos: NUNCA vao para o git
+  // nem para o frontend (sem prefixo VITE_).
+  ASAAS_ACCESS_TOKEN: z.string().optional(),
+  ASAAS_BASE_URL: z.string().url().default("https://api-sandbox.asaas.com/v3"),
+  ASAAS_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
+  ASAAS_WEBHOOK_TOKEN: z.string().optional(),
+  // Dias de vencimento da cobranca Pix (dueDate = hoje + N dias).
+  ASAAS_PIX_DUE_DAYS: z.coerce.number().int().min(1).max(30).default(1)
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -83,3 +81,12 @@ if (!parsedEnv.success) {
 export const env = parsedEnv.data;
 export const isDevelopment = env.NODE_ENV === "development";
 export const isProduction = env.NODE_ENV === "production";
+
+// Em producao com Asaas selecionado, o pagamento nao pode iniciar com config
+// incompleta. Falha forte de startup evita rodar a loja sem provider Pix valido.
+if (isProduction && env.PAYMENT_PROVIDER === "asaas" && !env.ASAAS_ACCESS_TOKEN) {
+  console.error(
+    "Invalid environment configuration: ASAAS_ACCESS_TOKEN is required when PAYMENT_PROVIDER=asaas in production"
+  );
+  process.exit(1);
+}

@@ -16,7 +16,7 @@ import {
   idempotencyKeySchema
 } from "../idempotency/idempotency.utils.js";
 import { recordPaymentAudit, type AuditRequestInfo } from "../payments/audit.service.js";
-import { mercadoPagoPixService } from "../payments/providers/mercado-pago-pix.service.js";
+import { asaasPixService } from "../payments/providers/asaas-pix.service.js";
 import { userRewardCycleService } from "../rewards/reward-cycle.service.js";
 import { storePackageService } from "../store/store.service.js";
 import { gameDeliveryService } from "../game-delivery/game-delivery.service.js";
@@ -64,6 +64,19 @@ function formatCurrencyFromCents(amountCents: number, currency = "BRL") {
 
 function getPackageCode(input: CreateOrderInput) {
   return input.packageCode ?? input.packageId ?? "";
+}
+
+// Asaas requires a customer to create a charge. We persist the customer id in
+// order.metadata (no schema change) and reuse it across orders so we never create a
+// duplicate customer per order.
+function readAsaasCustomerId(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object") {
+    return null;
+  }
+
+  const value = (metadata as Record<string, unknown>).asaasCustomerId;
+
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function buildCreateOrderResponse(
@@ -314,8 +327,8 @@ export class OrdersService {
             orderId: order.id,
             userId: user.id,
             status: "pending",
-            provider: mercadoPagoPixService.isEnabled()
-              ? mercadoPagoPixService.provider
+            provider: asaasPixService.isEnabled()
+              ? asaasPixService.provider
               : futurePaymentProvider,
             amountCents: storePackage.priceCents,
             currency: storePackage.currency
@@ -329,12 +342,29 @@ export class OrdersService {
             paymentId: payment.id
           }
         });
-        const pixPayment = await mercadoPagoPixService.createPixPayment({
+        // Reuse a previously created Asaas customer for this user, if any.
+        const recentOrders = await tx.order.findMany({
+          where: {
+            userId: user.id
+          },
+          orderBy: {
+            createdAt: "desc"
+          },
+          take: 10,
+          select: {
+            metadata: true
+          }
+        });
+        const existingCustomerId =
+          recentOrders.map((entry) => readAsaasCustomerId(entry.metadata)).find(Boolean) ?? null;
+        const pixPayment = await asaasPixService.createPixPayment({
           orderId: order.id,
           orderNumber: order.orderNumber,
           amountCents: storePackage.priceCents,
           currency: storePackage.currency,
           payerEmail: user.email,
+          payerName: user.name,
+          existingCustomerId,
           expiresAt: order.expiresAt,
           idempotencyKey
         });
@@ -344,7 +374,7 @@ export class OrdersService {
                 id: payment.id
               },
               data: {
-                provider: mercadoPagoPixService.provider,
+                provider: asaasPixService.provider,
                 providerPaymentId: pixPayment.providerPaymentId,
                 providerEventId: pixPayment.providerTransactionId,
                 rawProviderStatus: pixPayment.status,
@@ -364,9 +394,10 @@ export class OrdersService {
               data: {
                 metadata: {
                   source: "frontend_order_create",
-                  pixProvider: mercadoPagoPixService.provider,
+                  pixProvider: asaasPixService.provider,
                   pixProviderPaymentId: pixPayment.providerPaymentId,
-                  pixExpiresAt: toIsoDate(pixPayment.expiresAt)
+                  pixExpiresAt: toIsoDate(pixPayment.expiresAt),
+                  asaasCustomerId: pixPayment.asaasCustomerId
                 }
               }
             })
@@ -885,15 +916,14 @@ export class OrdersService {
 
     if (
       order.status === "pending_payment" &&
-      order.payment?.provider === mercadoPagoPixService.provider &&
+      order.payment?.provider === asaasPixService.provider &&
       order.payment.providerPaymentId &&
-      mercadoPagoPixService.isEnabled()
+      asaasPixService.isEnabled()
     ) {
-      const providerPayment = await mercadoPagoPixService.getProviderOrder(order.payment.providerPaymentId);
+      const providerPayment = await asaasPixService.getProviderOrder(order.payment.providerPaymentId);
 
       if (
-        providerPayment.status === "processed" &&
-        (!providerPayment.statusDetail || providerPayment.statusDetail === "accredited") &&
+        providerPayment.status === "approved" &&
         providerPayment.amountCents === order.amountCents &&
         providerPayment.currency === order.currency
       ) {
@@ -901,11 +931,11 @@ export class OrdersService {
           paymentId: order.payment.id,
           providerPaymentId: providerPayment.providerPaymentId,
           providerEventId: `status_poll:${providerPayment.providerPaymentId}`,
-          rawProviderStatus: providerPayment.status,
+          rawProviderStatus: providerPayment.statusDetail ?? providerPayment.status,
           providerPayloadHash: hashRequest(providerPayment),
           requestId: requestInfo.requestId,
           metadata: {
-            provider: mercadoPagoPixService.provider,
+            provider: asaasPixService.provider,
             source: "user_status_poll",
             providerPaymentId: providerPayment.providerPaymentId,
             statusDetail: providerPayment.statusDetail
@@ -917,7 +947,7 @@ export class OrdersService {
           id: order.payment.id
         },
         data: {
-            rawProviderStatus: providerPayment.status,
+            rawProviderStatus: providerPayment.statusDetail ?? providerPayment.status,
             providerPayloadHash: hashRequest(providerPayment)
         }
       });
