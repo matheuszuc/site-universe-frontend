@@ -12,7 +12,7 @@ import { authRoutes } from "./modules/auth/auth.routes.js";
 import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
 import { devPaymentsRoutes } from "./modules/dev/dev-payments.routes.js";
 import { ordersRoutes } from "./modules/orders/orders.routes.js";
-import { mercadoPagoWebhookRoutes } from "./modules/payments/mercado-pago-webhook.routes.js";
+import { asaasWebhookRoutes } from "./modules/payments/asaas-webhook.routes.js";
 import { rewardsRoutes } from "./modules/rewards/rewards.routes.js";
 import { storeRoutes } from "./modules/store/store.routes.js";
 import { registerErrorHandler } from "./middlewares/error-handler.js";
@@ -72,7 +72,7 @@ export async function buildApp() {
   await app.register(ordersRoutes, {
     prefix: "/orders"
   });
-  await app.register(mercadoPagoWebhookRoutes, {
+  await app.register(asaasWebhookRoutes, {
     prefix: "/webhooks"
   });
   if (isDevelopment) {

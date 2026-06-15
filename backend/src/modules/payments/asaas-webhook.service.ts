@@ -4,13 +4,14 @@ import { prisma } from "../../database/prisma.js";
 import { hashRequest } from "../idempotency/idempotency.utils.js";
 import { ordersService } from "../orders/orders.service.js";
 import { recordPaymentAudit, type AuditRequestInfo } from "./audit.service.js";
-import { mercadoPagoPixService } from "./providers/mercado-pago-pix.service.js";
+import { asaasPixService } from "./providers/asaas-pix.service.js";
 
-type MercadoPagoWebhookInput = {
-  dataId: string;
+type AsaasWebhookInput = {
+  event: string | null;
+  externalReference: string | null;
+  paymentId: string | null;
+  webhookToken?: string;
   eventId: string;
-  xRequestId?: string;
-  xSignature?: string;
   requestInfo?: AuditRequestInfo & {
     path?: string;
   };
@@ -18,51 +19,28 @@ type MercadoPagoWebhookInput = {
 
 const paymentWebhookScope = "payment_webhook";
 
+// Only "money received/confirmed" events can ever approve an order. Anything else
+// (created, overdue, refunded, deleted, chargeback) updates status but never delivers.
+const approvableEvents = new Set(["PAYMENT_RECEIVED", "PAYMENT_CONFIRMED"]);
+
 function isPrismaUniqueError(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
-function isApprovedPixStatus(status: string, statusDetail: string | null) {
-  return status === "processed" && (!statusDetail || statusDetail === "accredited");
-}
-
-function getWebhookKey(input: MercadoPagoWebhookInput) {
-  return `mercado_pago_pix:${input.eventId}:${input.dataId}`;
+function getWebhookKey(input: AsaasWebhookInput) {
+  return `asaas:${input.eventId}`;
 }
 
 async function findInternalPayment(input: {
-  siteUniversePaymentId: string | null;
-  siteUniverseOrderId: string | null;
   externalReference: string | null;
-  providerPaymentId: string;
+  paymentId: string | null;
 }) {
-  if (input.siteUniversePaymentId) {
-    return prisma.payment.findUnique({
-      where: {
-        id: input.siteUniversePaymentId
-      },
-      include: {
-        order: true
-      }
-    });
-  }
-
-  if (input.siteUniverseOrderId) {
-    return prisma.payment.findFirst({
-      where: {
-        orderId: input.siteUniverseOrderId,
-        provider: mercadoPagoPixService.provider
-      },
-      include: {
-        order: true
-      }
-    });
-  }
-
+  // externalReference is our orderNumber, set by us when creating the charge — the
+  // safest internal reference. Never trust amounts/status from the webhook body.
   if (input.externalReference) {
-    return prisma.payment.findFirst({
+    const byOrderNumber = await prisma.payment.findFirst({
       where: {
-        provider: mercadoPagoPixService.provider,
+        provider: asaasPixService.provider,
         order: {
           is: {
             orderNumber: input.externalReference
@@ -73,33 +51,38 @@ async function findInternalPayment(input: {
         order: true
       }
     });
+
+    if (byOrderNumber) {
+      return byOrderNumber;
+    }
   }
 
-  return prisma.payment.findFirst({
-    where: {
-      provider: mercadoPagoPixService.provider,
-      providerPaymentId: input.providerPaymentId
-    },
-    include: {
-      order: true
-    }
-  });
+  if (input.paymentId) {
+    return prisma.payment.findFirst({
+      where: {
+        provider: asaasPixService.provider,
+        providerPaymentId: input.paymentId
+      },
+      include: {
+        order: true
+      }
+    });
+  }
+
+  return null;
 }
 
-export class MercadoPagoWebhookService {
-  async handleWebhook(input: MercadoPagoWebhookInput) {
-    mercadoPagoPixService.validateWebhookSignature({
-      dataId: input.dataId,
-      xRequestId: input.xRequestId,
-      xSignature: input.xSignature
-    });
+export class AsaasWebhookService {
+  async handleWebhook(input: AsaasWebhookInput) {
+    asaasPixService.validateWebhookToken(input.webhookToken);
 
     const idempotencyKey = getWebhookKey(input);
     const requestHash = hashRequest({
       scope: paymentWebhookScope,
-      provider: mercadoPagoPixService.provider,
-      dataId: input.dataId,
-      eventId: input.eventId
+      provider: asaasPixService.provider,
+      event: input.event,
+      externalReference: input.externalReference,
+      paymentId: input.paymentId
     });
     const existingIdempotency = await prisma.idempotencyKey.findUnique({
       where: {
@@ -123,7 +106,7 @@ export class MercadoPagoWebhookService {
           scope: paymentWebhookScope,
           key: idempotencyKey,
           requestMethod: "POST",
-          requestPath: input.requestInfo?.path ?? "/webhooks/mercado-pago",
+          requestPath: input.requestInfo?.path ?? "/webhooks/asaas",
           requestHash,
           status: "processing"
         }
@@ -139,21 +122,18 @@ export class MercadoPagoWebhookService {
       throw error;
     }
 
-    const providerPayment = await mercadoPagoPixService.getProviderOrder(input.dataId);
-    const internalPayment = await findInternalPayment(providerPayment);
-
-    if (!internalPayment || internalPayment.provider !== mercadoPagoPixService.provider) {
+    // Events that are not a Pix payment confirmation never approve anything.
+    if (input.event && !approvableEvents.has(input.event)) {
       await recordPaymentAudit(prisma, {
         actorType: "webhook",
-        eventType: "MERCADO_PAGO_PIX_WEBHOOK_IGNORED",
+        eventType: "ASAAS_WEBHOOK_IGNORED_EVENT",
         entityType: "payment",
         idempotencyKey,
         requestInfo: input.requestInfo,
-        success: false,
-        reason: "payment_not_owned_by_site_universe",
+        success: true,
+        reason: input.event,
         metadata: {
-          providerPaymentId: providerPayment.providerPaymentId,
-          providerStatus: providerPayment.status
+          externalReference: input.externalReference
         }
       });
       await this.markSucceeded(idempotencyKey, {
@@ -167,8 +147,44 @@ export class MercadoPagoWebhookService {
       };
     }
 
+    const internalPayment = await findInternalPayment(input);
+
+    if (!internalPayment || internalPayment.provider !== asaasPixService.provider) {
+      await recordPaymentAudit(prisma, {
+        actorType: "webhook",
+        eventType: "ASAAS_WEBHOOK_IGNORED",
+        entityType: "payment",
+        idempotencyKey,
+        requestInfo: input.requestInfo,
+        success: false,
+        reason: "payment_not_owned_by_site_universe",
+        metadata: {
+          externalReference: input.externalReference,
+          paymentId: input.paymentId
+        }
+      });
+      await this.markSucceeded(idempotencyKey, {
+        accepted: true,
+        ignored: true
+      });
+
+      return {
+        accepted: true,
+        ignored: true
+      };
+    }
+
+    // Authoritative check: re-query Asaas server-to-server. We never trust the
+    // status/value posted in the webhook body. externalReference = our orderNumber.
+    const providerPaymentId =
+      internalPayment.providerPaymentId ?? input.paymentId ?? "";
+    const providerPayment = providerPaymentId
+      ? await asaasPixService.getProviderOrder(providerPaymentId)
+      : null;
+
     if (
-      !isApprovedPixStatus(providerPayment.status, providerPayment.statusDetail) ||
+      !providerPayment ||
+      providerPayment.status !== "approved" ||
       providerPayment.amountCents !== internalPayment.amountCents ||
       providerPayment.currency !== internalPayment.currency
     ) {
@@ -177,14 +193,14 @@ export class MercadoPagoWebhookService {
           id: internalPayment.id
         },
         data: {
-          rawProviderStatus: providerPayment.status,
+          rawProviderStatus: providerPayment?.statusDetail ?? providerPayment?.status ?? input.event,
           providerEventId: input.eventId,
-          providerPayloadHash: hashRequest(providerPayment)
+          providerPayloadHash: hashRequest(providerPayment ?? { event: input.event })
         }
       });
       await recordPaymentAudit(prisma, {
         actorType: "webhook",
-        eventType: "MERCADO_PAGO_PIX_WEBHOOK_NOT_APPROVED",
+        eventType: "ASAAS_WEBHOOK_NOT_APPROVED",
         entityType: "payment",
         entityId: internalPayment.id,
         userId: internalPayment.userId,
@@ -193,12 +209,11 @@ export class MercadoPagoWebhookService {
         idempotencyKey,
         requestInfo: input.requestInfo,
         success: true,
-        reason: providerPayment.status,
+        reason: providerPayment?.status ?? "no_provider_payment",
         metadata: {
-          providerPaymentId: providerPayment.providerPaymentId,
-          providerStatusDetail: providerPayment.statusDetail,
-          amountMatches: providerPayment.amountCents === internalPayment.amountCents,
-          currencyMatches: providerPayment.currency === internalPayment.currency
+          providerPaymentId: providerPayment?.providerPaymentId ?? providerPaymentId,
+          amountMatches: providerPayment?.amountCents === internalPayment.amountCents,
+          currencyMatches: providerPayment?.currency === internalPayment.currency
         }
       });
       await this.markSucceeded(idempotencyKey, {
@@ -216,13 +231,13 @@ export class MercadoPagoWebhookService {
       paymentId: internalPayment.id,
       providerPaymentId: providerPayment.providerPaymentId,
       providerEventId: input.eventId,
-      rawProviderStatus: providerPayment.status,
+      rawProviderStatus: providerPayment.statusDetail ?? providerPayment.status,
       providerPayloadHash: hashRequest(providerPayment),
       requestId: input.requestInfo?.requestId,
       metadata: {
-        provider: mercadoPagoPixService.provider,
+        provider: asaasPixService.provider,
         providerPaymentId: providerPayment.providerPaymentId,
-        statusDetail: providerPayment.statusDetail
+        externalReference: providerPayment.externalReference
       }
     });
 
@@ -257,4 +272,4 @@ export class MercadoPagoWebhookService {
   }
 }
 
-export const mercadoPagoWebhookService = new MercadoPagoWebhookService();
+export const asaasWebhookService = new AsaasWebhookService();
