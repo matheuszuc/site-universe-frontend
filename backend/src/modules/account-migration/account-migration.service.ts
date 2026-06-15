@@ -277,12 +277,6 @@ export class AccountMigrationService {
         throw accountAlreadyMigratedError;
       }
 
-      await gfLegacyAuthService.updateLegacyPassword({
-        gameLogin: session.gameLogin,
-        gameAccountId,
-        newPassword: parsedInput.newPassword
-      });
-
       const user = await tx.user.create({
         data: {
           name: safeDisplayGameLogin(session.gameLogin),
@@ -330,6 +324,17 @@ export class AccountMigrationService {
           gameAccountId: gameAccount.id,
           requiresPasswordUpdate: false
         }
+      });
+
+      // Atualiza a senha no banco legado GF como ULTIMA operacao da transacao.
+      // Se qualquer create/insert do site acima falhar, a transacao desfaz tudo
+      // e a senha do jogo NAO e alterada. Se este update falhar (lanca erro em
+      // rowCount != 1), a transacao tambem e revertida — evitando deixar a conta
+      // antiga com a senha trocada sem a conta de site correspondente criada.
+      await gfLegacyAuthService.updateLegacyPassword({
+        gameLogin: session.gameLogin,
+        gameAccountId,
+        newPassword: parsedInput.newPassword
       });
 
       return {

@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 
 import { requireJsonContentType } from "../../middlewares/content-type.js";
 import { requireAllowedOrigin } from "../../middlewares/origin-check.js";
+import { requireCsrf } from "../../middlewares/require-csrf.js";
 import {
   createOrderController,
   getCurrentUserOrderStatusController,
@@ -15,7 +16,7 @@ export async function ordersRoutes(app: FastifyInstance) {
   app.post(
     "/",
     {
-      preHandler: [requireAllowedOrigin, requireJsonContentType]
+      preHandler: [requireAllowedOrigin, requireJsonContentType, requireCsrf]
     },
     createOrderController
   );

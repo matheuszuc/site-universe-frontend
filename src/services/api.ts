@@ -10,6 +10,9 @@ type BackendErrorPayload = {
 
 type ApiRequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown
+  // Quando true, busca um token CSRF em GET /auth/csrf e o envia no header
+  // X-CSRF-Token. Use em mutações autenticadas (criar pedido, resgatar escala).
+  csrf?: boolean
 }
 
 const friendlyMessagesByCode: Record<string, string> = {
@@ -84,8 +87,9 @@ export function getApiErrorMessage(error: unknown) {
 }
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const headers = new Headers(options.headers)
-  const hasBody = options.body !== undefined
+  const { csrf, ...requestOptions } = options
+  const headers = new Headers(requestOptions.headers)
+  const hasBody = requestOptions.body !== undefined
 
   headers.set('Accept', 'application/json')
 
@@ -93,9 +97,14 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     headers.set('Content-Type', 'application/json')
   }
 
+  if (csrf) {
+    const { csrfToken } = await apiRequest<{ csrfToken: string }>('/auth/csrf')
+    headers.set('X-CSRF-Token', csrfToken)
+  }
+
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
-    ...options,
-    body: hasBody ? JSON.stringify(options.body) : undefined,
+    ...requestOptions,
+    body: hasBody ? JSON.stringify(requestOptions.body) : undefined,
     credentials: 'include',
     headers,
   })

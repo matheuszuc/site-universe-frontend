@@ -9,10 +9,10 @@ type BalanceCardProps = {
 export default function BalanceCard({ balances }: BalanceCardProps) {
   return (
     <Card className="p-5">
-      <p className="panel-card-kicker">Saldo AP</p>
+      <p className="panel-card-kicker">Saldo Unicoin</p>
       <div className="mt-3">
         <strong className="text-3xl font-black text-white">
-          {formatApAmount(balances.availableAp)} AP
+          {formatApAmount(balances.availableAp)} Unicoin
         </strong>
       </div>
       <p className="mt-2 text-sm leading-relaxed text-white/60">

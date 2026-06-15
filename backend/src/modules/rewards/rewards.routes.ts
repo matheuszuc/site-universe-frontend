@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 
 import { requireJsonContentType } from "../../middlewares/content-type.js";
 import { requireAllowedOrigin } from "../../middlewares/origin-check.js";
+import { requireCsrf } from "../../middlewares/require-csrf.js";
 import {
   claimRewardTierController,
   getRewardScaleController
@@ -18,7 +19,7 @@ export async function rewardsRoutes(app: FastifyInstance) {
   app.post(
     "/tiers/:tierCode/claim",
     {
-      preHandler: [requireAllowedOrigin, requireJsonContentType]
+      preHandler: [requireAllowedOrigin, requireJsonContentType, requireCsrf]
     },
     claimRewardTierController
   );

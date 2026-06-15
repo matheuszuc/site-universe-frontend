@@ -230,6 +230,7 @@ export async function getRewardScale() {
 export function claimRewardTier(tierCode: string) {
   return apiRequest<unknown>(`/api/rewards/tiers/${encodeURIComponent(tierCode)}/claim`, {
     body: {},
+    csrf: true,
     headers: {
       'Idempotency-Key': createIdempotencyKey('reward_tier_claim'),
     },

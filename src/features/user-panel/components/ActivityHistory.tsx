@@ -69,7 +69,7 @@ export default function ActivityHistory({ activities, orders }: ActivityHistoryP
 
       <section className="mt-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-black uppercase text-white/80">Compras de AP</h3>
+          <h3 className="text-sm font-black uppercase text-white/80">Compras de Unicoin</h3>
           <span className="text-xs font-semibold text-white/50">Últimos pedidos</span>
         </div>
 
@@ -91,7 +91,7 @@ export default function ActivityHistory({ activities, orders }: ActivityHistoryP
                     {order.orderNumber}
                   </p>
                   <h4 className="mt-1 text-base font-black text-white">
-                    Compra de {formatApAmount(order.apAmount)} AP
+                    Compra de {formatApAmount(order.apAmount)} Unicoin
                   </h4>
                   <p className="mt-1 text-sm text-white/65">{order.packageName}</p>
                 </div>

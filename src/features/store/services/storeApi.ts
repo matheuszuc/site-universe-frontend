@@ -124,6 +124,7 @@ export function createPendingOrder(packageCode: string) {
     body: {
       packageCode,
     },
+    csrf: true,
     headers: {
       'Idempotency-Key': createIdempotencyKey('order_create'),
     },
