@@ -119,10 +119,13 @@ export async function listStorePackages() {
   return response.packages.map(normalizeStorePackage)
 }
 
-export function createPendingOrder(packageCode: string) {
+export function createPendingOrder(packageCode: string, cpfCnpj?: string) {
   return apiRequest<CreateOrderResponse>('/orders', {
     body: {
       packageCode,
+      // Enviado apenas quando informado (somente numeros). Necessario para o Asaas
+      // criar o customer e gerar o Pix. Nao e armazenado no banco.
+      ...(cpfCnpj ? { cpfCnpj } : {}),
     },
     csrf: true,
     headers: {

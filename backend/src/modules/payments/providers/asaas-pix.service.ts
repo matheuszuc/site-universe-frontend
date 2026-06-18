@@ -208,20 +208,15 @@ export class AsaasPixService {
       return input.existingCustomerId;
     }
 
-    // Asaas REQUIRES cpfCnpj to create a customer. The site does not collect it yet,
-    // so in development/sandbox we fall back to a valid test CPF that belongs to no
-    // real person. In production we keep sending only when available (the request
-    // will fail at Asaas until the CPF is collected at signup). See production pendency.
-    const cpfCnpj =
-      input.payerCpfCnpj ?? (isDevelopment ? "529.982.247-25" : null);
-
     const response = await fetch(`${env.ASAAS_BASE_URL}/customers`, {
       method: "POST",
       headers: asaasHeaders(),
       body: JSON.stringify({
         name: input.payerName,
         email: input.payerEmail,
-        ...(cpfCnpj ? { cpfCnpj } : {}),
+        // Asaas REQUIRES cpfCnpj to create a customer. It is collected at checkout
+        // and passed through the order; sent only when available. Not persisted.
+        ...(input.payerCpfCnpj ? { cpfCnpj: input.payerCpfCnpj } : {}),
         externalReference: input.payerEmail
       })
     });

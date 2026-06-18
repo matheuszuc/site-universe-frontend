@@ -23,6 +23,110 @@ type CreatedOrderDetails = {
   storePackage: StorePackage
 }
 
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, '')
+}
+
+type CpfModalProps = {
+  storePackage: StorePackage
+  isCreating: boolean
+  onConfirm: (cpf: string) => void
+  onClose: () => void
+}
+
+// Pede o CPF antes de gerar o Pix: o Asaas exige cpfCnpj para criar o customer.
+// O valor nao e armazenado no banco (pendencia futura de LGPD).
+function CpfModal({ storePackage, isCreating, onConfirm, onClose }: CpfModalProps) {
+  const [cpf, setCpf] = useState('')
+  const [cpfError, setCpfError] = useState<string>()
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
+  function handleBackdropClick(event: MouseEvent<HTMLDivElement>) {
+    if (event.target === event.currentTarget) {
+      onClose()
+    }
+  }
+
+  function handleSubmit() {
+    const digits = onlyDigits(cpf)
+
+    if (digits.length !== 11) {
+      setCpfError('Digite um CPF válido com 11 dígitos (somente números).')
+      return
+    }
+
+    setCpfError(undefined)
+    onConfirm(digits)
+  }
+
+  return (
+    <div className="panel-modal-backdrop" onMouseDown={handleBackdropClick} role="presentation">
+      <div
+        aria-labelledby="cpf-modal-title"
+        aria-modal="true"
+        className="panel-modal store-order-modal"
+        role="dialog"
+      >
+        <button
+          aria-label="Fechar"
+          className="panel-modal-close"
+          onClick={onClose}
+          type="button"
+        >
+          <i className="bx bx-x" aria-hidden="true" />
+        </button>
+
+        <p className="panel-card-kicker">{storePackage.name}</p>
+        <h2 id="cpf-modal-title">Informe seu CPF</h2>
+        <p>Digite seu CPF (somente números) para gerar o pagamento via Pix.</p>
+
+        <div className="store-pix-copy">
+          <label htmlFor="cpf-input">CPF</label>
+          <input
+            autoFocus
+            id="cpf-input"
+            inputMode="numeric"
+            maxLength={14}
+            onChange={(event) => setCpf(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                handleSubmit()
+              }
+            }}
+            placeholder="Somente números"
+            type="text"
+            value={cpf}
+          />
+        </div>
+
+        {cpfError && (
+          <div className="store-order-status-note store-order-status-error">{cpfError}</div>
+        )}
+
+        <div className="store-order-actions">
+          <Button onClick={onClose} variant="secondary">
+            Cancelar
+          </Button>
+          <Button disabled={isCreating} onClick={handleSubmit} variant="primary">
+            {isCreating ? 'Gerando Pix...' : 'Continuar'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 type PendingOrderModalProps = {
   details: CreatedOrderDetails
   onClose: () => void
@@ -200,6 +304,7 @@ export default function UserStore() {
   const { t } = useTranslation()
   const [packages, setPackages] = useState<StorePackage[]>([])
   const [createdOrderDetails, setCreatedOrderDetails] = useState<CreatedOrderDetails | null>(null)
+  const [cpfPackage, setCpfPackage] = useState<StorePackage | null>(null)
   const [creatingPackageCode, setCreatingPackageCode] = useState<string>()
   const [errorMessage, setErrorMessage] = useState<string>()
   const [isLoading, setIsLoading] = useState(true)
@@ -243,7 +348,15 @@ export default function UserStore() {
     }
   }
 
-  async function handleCreateOrder(storePackage: StorePackage) {
+  // Abre o modal de CPF antes de criar o pedido (o Asaas exige cpfCnpj no Pix).
+  function handleSelectPackage(storePackage: StorePackage) {
+    if (emailNotVerified) return
+
+    setErrorMessage(undefined)
+    setCpfPackage(storePackage)
+  }
+
+  async function handleCreateOrder(storePackage: StorePackage, cpfCnpj: string) {
     if (emailNotVerified) return
 
     setCreatedOrderDetails(null)
@@ -251,11 +364,13 @@ export default function UserStore() {
     setCreatingPackageCode(storePackage.code)
 
     try {
-      const order = await createPendingOrder(storePackage.code)
+      const order = await createPendingOrder(storePackage.code, cpfCnpj)
+      setCpfPackage(null)
       setCreatedOrderDetails({ order, storePackage })
     } catch (error) {
       if (error instanceof ApiError && error.code === 'EMAIL_NOT_VERIFIED') {
         setErrorMessage(t.store.emailNotVerified)
+        setCpfPackage(null)
       } else {
         setErrorMessage(t.store.createError)
       }
@@ -312,7 +427,7 @@ export default function UserStore() {
                 disabled={emailNotVerified}
                 isCreating={creatingPackageCode === storePackage.code}
                 key={storePackage.code}
-                onSelect={handleCreateOrder}
+                onSelect={handleSelectPackage}
                 storePackage={storePackage}
               />
             ))}
@@ -327,6 +442,15 @@ export default function UserStore() {
           <Button className="mt-5" onClick={loadPackages} variant="secondary">
             {t.store.retry}
           </Button>
+        )}
+
+        {cpfPackage && (
+          <CpfModal
+            isCreating={creatingPackageCode === cpfPackage.code}
+            onClose={() => setCpfPackage(null)}
+            onConfirm={(cpf) => handleCreateOrder(cpfPackage, cpf)}
+            storePackage={cpfPackage}
+          />
         )}
 
         {createdOrderDetails && (

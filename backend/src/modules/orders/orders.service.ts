@@ -364,6 +364,8 @@ export class OrdersService {
           currency: storePackage.currency,
           payerEmail: user.email,
           payerName: user.name,
+          // CPF/CNPJ vem do body da compra (sessao do usuario); nao e armazenado.
+          payerCpfCnpj: parsedInput.cpfCnpj ?? null,
           existingCustomerId,
           expiresAt: order.expiresAt,
           idempotencyKey
