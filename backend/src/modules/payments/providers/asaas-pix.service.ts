@@ -1,5 +1,19 @@
+import { timingSafeEqual } from "node:crypto";
+
 import { env, isDevelopment } from "../../../config/env.js";
 import { AppError } from "../../../utils/safe-error.js";
+
+// Comparação de segredos em tempo constante (evita timing side-channel).
+function safeStringEquals(a: string, b: string) {
+  const bufferA = Buffer.from(a);
+  const bufferB = Buffer.from(b);
+
+  if (bufferA.length !== bufferB.length) {
+    return false;
+  }
+
+  return timingSafeEqual(bufferA, bufferB);
+}
 
 type CreatePixPaymentInput = {
   orderId: string;
@@ -346,7 +360,7 @@ export class AsaasPixService {
       return;
     }
 
-    if (!receivedToken || receivedToken !== env.ASAAS_WEBHOOK_TOKEN) {
+    if (!receivedToken || !safeStringEquals(receivedToken, env.ASAAS_WEBHOOK_TOKEN)) {
       throw new AppError(403, "FORBIDDEN", "Token de webhook inválido.");
     }
   }

@@ -33,7 +33,7 @@ function isAllowedOrigin(origin: string) {
 export const corsOptions: FastifyCorsOptions = {
   credentials: true,
   origin(origin, callback) {
-    // No Origin header = server-to-server or same-origin (e.g. webhook from Mercado Pago)
+    // No Origin header = server-to-server or same-origin (e.g. webhook from Asaas)
     if (origin === undefined) {
       callback(null, true);
       return;

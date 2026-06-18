@@ -10,8 +10,12 @@ import {
 } from "./orders.controller.js";
 
 export async function ordersRoutes(app: FastifyInstance) {
-  app.get("/", listCurrentUserOrdersController);
-  app.get("/:orderNumber/status", getCurrentUserOrderStatusController);
+  app.get("/", { preHandler: [requireAllowedOrigin] }, listCurrentUserOrdersController);
+  app.get<{ Params: { orderNumber: string } }>(
+    "/:orderNumber/status",
+    { preHandler: [requireAllowedOrigin] },
+    getCurrentUserOrderStatusController
+  );
 
   app.post(
     "/",

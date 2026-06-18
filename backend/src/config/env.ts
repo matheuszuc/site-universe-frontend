@@ -16,6 +16,7 @@ const envSchema = z.object({
   APP_PUBLIC_URL: z.string().url().default("http://localhost:5173"),
   SESSION_COOKIE_NAME: z.string().min(1).default("site_universe_session"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  COOKIE_SAME_SITE: z.enum(["lax", "none"]).default("lax"),
   ACCOUNT_MIGRATION_COOKIE_NAME: z
     .string()
     .min(1)
@@ -82,11 +83,66 @@ export const env = parsedEnv.data;
 export const isDevelopment = env.NODE_ENV === "development";
 export const isProduction = env.NODE_ENV === "production";
 
-// Em producao com Asaas selecionado, o pagamento nao pode iniciar com config
-// incompleta. Falha forte de startup evita rodar a loja sem provider Pix valido.
-if (isProduction && env.PAYMENT_PROVIDER === "asaas" && !env.ASAAS_ACCESS_TOKEN) {
+// Em producao, configuracao insegura/incompleta deve impedir o boot. Evita rodar
+// com pagamento mock/sandbox, e-mail mock, reCAPTCHA desligado por engano, CORS
+// apontando para localhost ou segredos ausentes. NAO afeta desenvolvimento local
+// (todo este bloco so roda quando NODE_ENV=production).
+if (isProduction) {
+  const productionErrors: string[] = [];
+  const usesLocalhost = (value: string) => /localhost|127\.0\.0\.1/i.test(value);
+
+  // CORS/links publicos nao podem apontar para localhost em producao.
+  if (usesLocalhost(env.FRONTEND_URL)) {
+    productionErrors.push("FRONTEND_URL must not point to localhost in production");
+  }
+  if (usesLocalhost(env.APP_PUBLIC_URL)) {
+    productionErrors.push("APP_PUBLIC_URL must not point to localhost in production");
+  }
+
+  // E-mail real obrigatorio: "console" e um mock de desenvolvimento.
+  if (env.EMAIL_PROVIDER !== "resend") {
+    productionErrors.push('EMAIL_PROVIDER must be "resend" in production (console is a dev-only mock)');
+  }
+  if (env.EMAIL_PROVIDER === "resend" && !env.RESEND_API_KEY) {
+    productionErrors.push("RESEND_API_KEY is required when EMAIL_PROVIDER=resend");
+  }
+
+  // reCAPTCHA nao pode ser desativado por engano em producao.
+  if (!env.RECAPTCHA_ENABLED) {
+    productionErrors.push("RECAPTCHA_ENABLED must be true in production");
+  }
+  if (env.RECAPTCHA_ENABLED && !env.RECAPTCHA_SECRET_KEY) {
+    productionErrors.push("RECAPTCHA_SECRET_KEY is required when RECAPTCHA_ENABLED=true");
+  }
+
+  // Pagamento Pix via Asaas: segredos presentes e ambiente de producao (sem sandbox).
+  if (env.PAYMENT_PROVIDER === "asaas") {
+    if (!env.ASAAS_ACCESS_TOKEN) {
+      productionErrors.push("ASAAS_ACCESS_TOKEN is required when PAYMENT_PROVIDER=asaas in production");
+    }
+    if (!env.ASAAS_WEBHOOK_TOKEN) {
+      productionErrors.push("ASAAS_WEBHOOK_TOKEN is required when PAYMENT_PROVIDER=asaas in production");
+    }
+    if (env.ASAAS_ENV !== "production") {
+      productionErrors.push('ASAAS_ENV must be "production" in production');
+    }
+    if (/sandbox/i.test(env.ASAAS_BASE_URL)) {
+      productionErrors.push("ASAAS_BASE_URL must not point to the Asaas sandbox in production");
+    }
+  }
+
+  if (productionErrors.length > 0) {
+    console.error(
+      "Invalid production environment configuration:\n" +
+        productionErrors.map((message) => `  - ${message}`).join("\n")
+    );
+    process.exit(1);
+  }
+}
+
+if (env.RECAPTCHA_ENABLED && !env.RECAPTCHA_SECRET_KEY) {
   console.error(
-    "Invalid environment configuration: ASAAS_ACCESS_TOKEN is required when PAYMENT_PROVIDER=asaas in production"
+    "Invalid environment configuration: RECAPTCHA_SECRET_KEY is required when RECAPTCHA_ENABLED=true"
   );
   process.exit(1);
 }
