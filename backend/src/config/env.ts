@@ -138,3 +138,10 @@ if (isProduction) {
     process.exit(1);
   }
 }
+
+if (env.RECAPTCHA_ENABLED && !env.RECAPTCHA_SECRET_KEY) {
+  console.error(
+    "Invalid environment configuration: RECAPTCHA_SECRET_KEY is required when RECAPTCHA_ENABLED=true"
+  );
+  process.exit(1);
+}
