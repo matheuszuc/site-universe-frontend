@@ -16,6 +16,7 @@ const envSchema = z.object({
   APP_PUBLIC_URL: z.string().url().default("http://localhost:5173"),
   SESSION_COOKIE_NAME: z.string().min(1).default("site_universe_session"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  COOKIE_SAME_SITE: z.enum(["lax", "none"]).default("lax"),
   ACCOUNT_MIGRATION_COOKIE_NAME: z
     .string()
     .min(1)
