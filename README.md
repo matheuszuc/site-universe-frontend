@@ -135,7 +135,7 @@ rank_3=60047, rank_4=60048, rank_5=60049, rank_6=60050.
 - Se a conta for validada, o backend cria uma sessão temporária em cookie httpOnly, com expiração configurada em `ACCOUNT_MIGRATION_SESSION_TTL_MINUTES`.
 - A segunda etapa usa `POST /api/account-migration/complete` para cadastrar e-mail e nova senha no Site Universe.
 - A nova senha do site segue a regra GF: apenas letras minúsculas e números, mínimo 10 caracteres (sem maiúsculas/símbolos), igual ao registro.
-- A etapa inicial da migração (`/api/account-migration/start`) valida reCAPTCHA quando `RECAPTCHA_ENABLED=true`; o frontend usa o mesmo `RecaptchaWidget` do Login/Registro e envia `recaptchaToken`.
+- A etapa inicial da migração (`/api/account-migration/start`) valida reCAPTCHA quando `RECAPTCHA_ENABLED=true`; o frontend usa o mesmo reCAPTCHA v3 (`executeRecaptcha`) do Login/Registro, com a ação `migrate_account`, e envia `recaptchaToken`.
 - Ao concluir, a senha do Site Universe é salva com o hash moderno do backend; MD5 é usado somente para compatibilidade com o Grand Fantasia.
 - O backend atualiza `gf_ms.tb_user.password`, `gf_ms.tb_user.pwd` e `gf_ls.accounts.password` com o mesmo MD5 da nova senha.
 - O backend não altera `gf_ls.accounts.charpassword`, `use_charpassword`, `pvalues`, `bonus`, AP/P ou itens.

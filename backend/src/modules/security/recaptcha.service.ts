@@ -5,6 +5,9 @@ type RecaptchaVerifyResponse = {
   success: boolean;
   challenge_ts?: string;
   hostname?: string;
+  // Presente apenas no reCAPTCHA v3 (0.0 = provavel bot, 1.0 = provavel humano).
+  score?: number;
+  action?: string;
   "error-codes"?: string[];
 };
 
@@ -47,6 +50,12 @@ export class RecaptchaService {
     }
 
     if (!data.success) {
+      throw new AppError(400, "RECAPTCHA_FAILED", "Verificação de segurança falhou. Tente novamente.");
+    }
+
+    // reCAPTCHA v3: alem de success, validamos o score minimo. Tokens v2 nao
+    // trazem o campo "score", entao essa verificacao e ignorada para eles.
+    if (typeof data.score === "number" && data.score < env.RECAPTCHA_MIN_SCORE) {
       throw new AppError(400, "RECAPTCHA_FAILED", "Verificação de segurança falhou. Tente novamente.");
     }
   }

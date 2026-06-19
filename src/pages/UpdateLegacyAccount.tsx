@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import type ReCAPTCHA from 'react-google-recaptcha'
 import AuthCard from '../components/auth/AuthCard'
 import AuthHeader from '../components/auth/AuthHeader'
-import { RecaptchaWidget, isRecaptchaRequired } from '../components/auth/RecaptchaWidget'
+import { executeRecaptcha, isRecaptchaRequired } from '../components/auth/recaptchaV3'
 import PublicLayout from '../components/layout/PublicLayout'
 import Alert from '../components/ui/Alert'
 import Input from '../components/ui/Input'
@@ -58,8 +57,6 @@ export default function UpdateLegacyAccount() {
   const [isLoading, setIsLoading] = useState(false)
   const [isCheckingStatus, setIsCheckingStatus] = useState(true)
   const [migrationDisabled, setMigrationDisabled] = useState(false)
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
-  const recaptchaRef = useRef<ReCAPTCHA>(null)
   const passwordRules = useMemo(() => getPasswordRules(t), [t])
   const passwordChecks = useMemo(
     () => passwordRules.map((rule) => ({ ...rule, valid: rule.test(newPassword) })),
@@ -120,9 +117,14 @@ export default function UpdateLegacyAccount() {
       return
     }
 
-    if (isRecaptchaRequired() && !recaptchaToken) {
-      setErrorMessage(t.auth.recaptchaRequired)
-      return
+    let recaptchaToken: string | undefined
+    if (isRecaptchaRequired()) {
+      try {
+        recaptchaToken = await executeRecaptcha('migrate_account')
+      } catch {
+        setErrorMessage(t.auth.recaptchaRequired)
+        return
+      }
     }
 
     setIsLoading(true)
@@ -131,7 +133,7 @@ export default function UpdateLegacyAccount() {
       const result = await startAccountMigration({
         gameLogin: normalizedGameLogin,
         currentPassword,
-        recaptchaToken: recaptchaToken ?? undefined,
+        recaptchaToken,
       })
       setGameLogin(result.gameLogin)
       setCurrentPassword('')
@@ -144,8 +146,6 @@ export default function UpdateLegacyAccount() {
       } else {
         setErrorMessage(getApiErrorMessage(error))
       }
-      recaptchaRef.current?.reset()
-      setRecaptchaToken(null)
     } finally {
       setIsLoading(false)
     }
@@ -246,8 +246,6 @@ export default function UpdateLegacyAccount() {
                     <div className="legacy-security-note">
                       {t.migration.securityNote}
                     </div>
-
-                    <RecaptchaWidget ref={recaptchaRef} onVerify={setRecaptchaToken} />
 
                     <LoadingButton
                       className="w-full"

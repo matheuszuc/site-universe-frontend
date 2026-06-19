@@ -49,6 +49,10 @@ const envSchema = z.object({
   ACCOUNT_MIGRATION_ENABLED: booleanStringSchema.default(true),
   RECAPTCHA_ENABLED: booleanStringSchema.default(false),
   RECAPTCHA_SECRET_KEY: z.string().optional(),
+  // reCAPTCHA v3 devolve um "score" entre 0 e 1. Requisicoes com score abaixo
+  // deste limite sao rejeitadas (RECAPTCHA_FAILED). Tokens v2 (sem score) nao
+  // sao afetados por esta verificacao.
+  RECAPTCHA_MIN_SCORE: z.coerce.number().min(0).max(1).default(0.5),
   SINGLE_ACTIVE_SESSION: booleanStringSchema.default(false),
   GF_DB_HOST: z.string().optional(),
   GF_DB_PORT: z.coerce.number().int().positive().default(5432),

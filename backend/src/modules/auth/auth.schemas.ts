@@ -1,5 +1,39 @@
 import { z } from "zod";
 
+// Dominios de e-mail descartaveis/temporarios conhecidos. Cadastros com esses
+// dominios sao recusados para evitar contas de uso unico / abuso.
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  "mailinator.com",
+  "guerrillamail.com",
+  "tempmail.com",
+  "throwam.com",
+  "yopmail.com",
+  "sharklasers.com",
+  "trashmail.com",
+  "fakeinbox.com",
+  "maildrop.cc",
+  "dispostable.com",
+  "spamgourmet.com",
+  "email.com",
+  "email.pt",
+  "10minutemail.com",
+  "getnada.com"
+]);
+
+// E-mail valido (Zod) + bloqueio de dominios descartaveis. Reusado no registro,
+// login e demais fluxos que recebem e-mail.
+const emailSchema = z
+  .string()
+  .trim()
+  .email()
+  .refine(
+    (value) => {
+      const domain = value.slice(value.lastIndexOf("@") + 1).toLowerCase();
+      return !DISPOSABLE_EMAIL_DOMAINS.has(domain);
+    },
+    { message: "Por favor, use um e-mail válido." }
+  );
+
 // GF-compatible: only lowercase letters a-z and digits 0-9, min 10 chars
 const passwordSchema = z
   .string()
@@ -25,19 +59,19 @@ const nameSchema = z
 
 export const registerSchema = z.object({
   name: nameSchema,
-  email: z.string().trim().email(),
+  email: emailSchema,
   password: passwordSchema,
   recaptchaToken: z.string().optional()
 });
 
 export const loginSchema = z.object({
-  email: z.string().trim().email(),
+  email: emailSchema,
   password: z.string().min(1).max(128),
   recaptchaToken: z.string().optional()
 });
 
 export const emailOnlySchema = z.object({
-  email: z.string().trim().email()
+  email: emailSchema
 });
 
 export const verifyEmailQuerySchema = z.object({
@@ -45,7 +79,7 @@ export const verifyEmailQuerySchema = z.object({
 });
 
 export const verifyEmailCodeSchema = z.object({
-  email: z.string().trim().email(),
+  email: emailSchema,
   code: z.string().trim().regex(/^\d{6,8}$/)
 });
 

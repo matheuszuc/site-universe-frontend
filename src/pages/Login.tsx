@@ -1,12 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import type ReCAPTCHA from 'react-google-recaptcha'
 import AuthCard from '../components/auth/AuthCard'
 import AuthHeader from '../components/auth/AuthHeader'
 import FormError from '../components/auth/FormError'
-import { RecaptchaWidget, isRecaptchaRequired } from '../components/auth/RecaptchaWidget'
+import { executeRecaptcha, isRecaptchaRequired } from '../components/auth/recaptchaV3'
 import PublicLayout from '../components/layout/PublicLayout'
 import Alert from '../components/ui/Alert'
 import Input from '../components/ui/Input'
@@ -37,8 +36,6 @@ export default function Login() {
   const [verificationCode, setVerificationCode] = useState('')
   const [isVerifyingCode, setIsVerifyingCode] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null)
-  const recaptchaRef = useRef<ReCAPTCHA>(null)
 
   useEffect(() => {
     if (resendCooldown <= 0) {
@@ -69,13 +66,18 @@ export default function Login() {
     setUnverifiedEmail(undefined)
     setVerificationCode('')
 
-    if (isRecaptchaRequired() && !recaptchaToken) {
-      setErrorMessage(t.auth.recaptchaRequired)
-      return
+    let recaptchaToken: string | undefined
+    if (isRecaptchaRequired()) {
+      try {
+        recaptchaToken = await executeRecaptcha('login')
+      } catch {
+        setErrorMessage(t.auth.recaptchaRequired)
+        return
+      }
     }
 
     try {
-      await login({ ...values, recaptchaToken: recaptchaToken ?? undefined })
+      await login({ ...values, recaptchaToken })
       const redirectTo = ((location.state as LoginLocationState | null)?.from?.pathname) ?? '/painel'
       navigate(redirectTo, { replace: true })
     } catch (error) {
@@ -84,8 +86,6 @@ export default function Login() {
       }
 
       setErrorMessage(getApiErrorMessage(error))
-      recaptchaRef.current?.reset()
-      setRecaptchaToken(null)
     }
   }
 
@@ -188,8 +188,6 @@ export default function Login() {
                 {t.login.forgotPassword}
               </Link>
             </div>
-
-            <RecaptchaWidget ref={recaptchaRef} onVerify={setRecaptchaToken} />
 
             <LoadingButton className="w-full" isLoading={isSubmitting} loadingText={t.login.submitting} type="submit">
               {t.login.submit}
