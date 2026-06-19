@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type MouseEvent } from 'react'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
 import { useAuth } from '../contexts/AuthContext'
@@ -58,7 +58,9 @@ function CpfModal({ storePackage, isCreating, onConfirm, onClose }: CpfModalProp
     }
   }
 
-  function handleSubmit() {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
     const digits = onlyDigits(cpf)
 
     if (digits.length !== 11) {
@@ -91,37 +93,36 @@ function CpfModal({ storePackage, isCreating, onConfirm, onClose }: CpfModalProp
         <h2 id="cpf-modal-title">Informe seu CPF</h2>
         <p>Digite seu CPF (somente números) para gerar o pagamento via Pix.</p>
 
-        <div className="store-pix-copy">
-          <label htmlFor="cpf-input">CPF</label>
-          <input
-            autoFocus
-            id="cpf-input"
-            inputMode="numeric"
-            maxLength={14}
-            onChange={(event) => setCpf(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                handleSubmit()
-              }
-            }}
-            placeholder="Somente números"
-            type="text"
-            value={cpf}
-          />
-        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="store-pix-copy">
+            <label htmlFor="cpf-input">CPF</label>
+            <input
+              autoFocus
+              className="w-full rounded-lg border border-white/20 bg-white px-3 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+              id="cpf-input"
+              inputMode="numeric"
+              maxLength={14}
+              onChange={(event) => setCpf(event.target.value)}
+              placeholder="Somente números"
+              style={{ color: '#0f172a' }}
+              type="text"
+              value={cpf}
+            />
+          </div>
 
-        {cpfError && (
-          <div className="store-order-status-note store-order-status-error">{cpfError}</div>
-        )}
+          {cpfError && (
+            <div className="store-order-status-note store-order-status-error">{cpfError}</div>
+          )}
 
-        <div className="store-order-actions">
-          <Button onClick={onClose} variant="secondary">
-            Cancelar
-          </Button>
-          <Button disabled={isCreating} onClick={handleSubmit} variant="primary">
-            {isCreating ? 'Gerando Pix...' : 'Continuar'}
-          </Button>
-        </div>
+          <div className="store-order-actions">
+            <Button onClick={onClose} type="button" variant="secondary">
+              Cancelar
+            </Button>
+            <Button disabled={isCreating} type="submit" variant="primary">
+              {isCreating ? 'Gerando Pix...' : 'Continuar'}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   )
