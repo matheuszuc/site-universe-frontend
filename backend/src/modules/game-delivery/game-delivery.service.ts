@@ -4,7 +4,7 @@ import { env } from "../../config/env.js";
 import { prisma } from "../../database/prisma.js";
 import { AppError } from "../../utils/safe-error.js";
 import { recordPaymentAudit, type AuditRequestInfo } from "../payments/audit.service.js";
-import { gfDatabaseService } from "./gf-database.service.js";
+import { ALLOWED_REWARD_BOX_ITEM_IDS, gfDatabaseService } from "./gf-database.service.js";
 
 type DeliveryClient = Prisma.TransactionClient | typeof prisma;
 
@@ -112,6 +112,15 @@ export class GameDeliveryService {
     input: CreateRewardBoxDeliveryInput
   ) {
     if (input.itemId <= 0) {
+      throw new AppError(409, "CONFLICT", "Recompensa indisponivel no momento.");
+    }
+
+    // Espelho da allowlist (falha ja no resgate, antes de criar a entrega), alem da
+    // checagem final em insertRewardBox imediatamente antes da escrita no banco do jogo.
+    if (!ALLOWED_REWARD_BOX_ITEM_IDS.has(input.itemId)) {
+      console.error("reward box item id rejeitado pela allowlist (claim)", {
+        itemId: input.itemId
+      });
       throw new AppError(409, "CONFLICT", "Recompensa indisponivel no momento.");
     }
 

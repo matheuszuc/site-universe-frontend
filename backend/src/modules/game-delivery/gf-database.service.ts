@@ -17,6 +17,12 @@ type InsertRewardBoxInput = {
   point: number;
 };
 
+// IDs de box por rank da Reward Scale, confirmados pelo time do jogo. Allowlist de
+// defesa-em-profundidade: mesmo que reward_tiers.box_game_item_id seja alterado no
+// banco (erro ou ataque), nenhum item fora desta lista chega ao item_receivable.
+// Rank 1=60045, Rank 2=60046, Rank 3=60047, Rank 4=60048, Rank 5=60049, Rank 6=60050
+export const ALLOWED_REWARD_BOX_ITEM_IDS = new Set([60045, 60046, 60047, 60048, 60049, 60050]);
+
 function isGfDatabaseConfigured() {
   return Boolean(env.GF_DB_HOST && env.GF_DB_USER && env.GF_DB_PASSWORD);
 }
@@ -47,6 +53,15 @@ export class GfDatabaseService {
   async insertRewardBox(input: InsertRewardBoxInput) {
     if (input.itemId <= 0 || input.itemQuantity <= 0 || input.point < 0) {
       throw new AppError(409, "CONFLICT", "Entrega de recompensa invalida.");
+    }
+
+    // Ultima linha de defesa antes da escrita no banco do jogo: rejeita qualquer
+    // itemId fora da allowlist (violacao de integridade), logando antes do throw.
+    if (!ALLOWED_REWARD_BOX_ITEM_IDS.has(input.itemId)) {
+      console.error("reward box item id rejeitado pela allowlist", {
+        itemId: input.itemId
+      });
+      throw new AppError(409, "CONFLICT", "Recompensa indisponivel no momento.");
     }
 
     await this.getAccountPool().query(
