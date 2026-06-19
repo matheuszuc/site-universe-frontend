@@ -7,7 +7,12 @@ const sections = [
     content:
       'Durante o cadastro, o Site Universe poderá solicitar informações como nome de usuário, e-mail e senha. Esses dados são necessários para identificação da conta e acesso aos recursos da plataforma.',
   },
-  {
+{
+    title: 'Dados de pagamento',
+    content:
+      'Para processar pagamentos via Pix, coletamos temporariamente o CPF do titular do pagamento. O CPF é transmitido diretamente ao nosso processador de pagamentos (Asaas) exclusivamente para geração da cobrança e não é armazenado em nosso banco de dados. O uso do CPF tem como base legal a execução de contrato, conforme a Lei Geral de Proteção de Dados (LGPD, Art. 7º, V).',
+  },  
+{
     title: 'Uso do e-mail',
     content:
       'O e-mail poderá ser utilizado para confirmação de conta, recuperação de senha, comunicações importantes de segurança e mensagens relacionadas ao funcionamento da plataforma.',
