@@ -5,7 +5,7 @@ import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 
 import { corsOptions } from "./config/cors.js";
-import { env, isDevelopment } from "./config/env.js";
+import { env, isPaymentSimulatorEnabled } from "./config/env.js";
 import { accountMigrationRoutes } from "./modules/account-migration/account-migration.routes.js";
 import { adminRoutes } from "./modules/admin/admin.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
@@ -82,7 +82,7 @@ export async function buildApp() {
   await app.register(asaasWebhookRoutes, {
     prefix: "/webhooks"
   });
-  if (isDevelopment) {
+  if (isPaymentSimulatorEnabled) {
     await app.register(devPaymentsRoutes, {
       prefix: "/dev/payments"
     });

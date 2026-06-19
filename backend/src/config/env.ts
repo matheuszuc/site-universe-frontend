@@ -63,6 +63,10 @@ const envSchema = z.object({
   GF_DB_SSL: booleanStringSchema,
   GAME_DELIVERY_ENABLED: booleanStringSchema.default(false),
   GAME_ACCOUNT_CREATION_ENABLED: booleanStringSchema.default(true),
+  // Habilita o simulador de pagamento (POST /dev/payments/simulate-approved).
+  // PROIBIDO em producao: o bloco de boot abaixo derruba o startup se isto for
+  // true quando NODE_ENV=production. So tem efeito junto com NODE_ENV=development.
+  ALLOW_PAYMENT_SIMULATOR: booleanStringSchema.default(false),
   // Provedor de pagamento Pix. O Site Universe aceita SOMENTE Pix, via Asaas.
   // Mercado Pago, Banco Inter e OpenPix NAO sao usados.
   PAYMENT_PROVIDER: z.enum(["asaas"]).default("asaas"),
@@ -87,6 +91,10 @@ export const env = parsedEnv.data;
 export const isDevelopment = env.NODE_ENV === "development";
 export const isProduction = env.NODE_ENV === "production";
 
+// Gate unico do simulador de pagamento. Exige ambiente de desenvolvimento E a flag
+// dedicada. Em producao e sempre false (o boot abaixo proibe a flag em prod).
+export const isPaymentSimulatorEnabled = isDevelopment && env.ALLOW_PAYMENT_SIMULATOR;
+
 // Em producao, configuracao insegura/incompleta deve impedir o boot. Evita rodar
 // com pagamento mock/sandbox, e-mail mock, reCAPTCHA desligado por engano, CORS
 // apontando para localhost ou segredos ausentes. NAO afeta desenvolvimento local
@@ -94,6 +102,11 @@ export const isProduction = env.NODE_ENV === "production";
 if (isProduction) {
   const productionErrors: string[] = [];
   const usesLocalhost = (value: string) => /localhost|127\.0\.0\.1/i.test(value);
+
+  // O simulador de pagamento NUNCA pode estar ligado em producao.
+  if (env.ALLOW_PAYMENT_SIMULATOR) {
+    productionErrors.push("ALLOW_PAYMENT_SIMULATOR must not be true in production");
+  }
 
   // CORS/links publicos nao podem apontar para localhost em producao.
   if (usesLocalhost(env.FRONTEND_URL)) {
