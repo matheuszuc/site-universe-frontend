@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import { isDevelopment } from "../../config/env.js";
+import { isPaymentSimulatorEnabled } from "../../config/env.js";
 import { ordersService } from "../orders/orders.service.js";
 import { AppError } from "../../utils/safe-error.js";
 
@@ -18,7 +18,7 @@ export async function simulateApprovedPaymentController(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
-  if (!isDevelopment) {
+  if (!isPaymentSimulatorEnabled) {
     throw new AppError(404, "NOT_FOUND", "Recurso nao encontrado.");
   }
 
