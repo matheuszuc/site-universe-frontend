@@ -11,7 +11,7 @@ const gfSitePasswordSchema = z
   .regex(/^[a-z0-9]+$/, "A senha deve usar apenas letras minúsculas e números.");
 
 export const startAccountMigrationSchema = z.object({
-  gameLogin: z.string().trim().min(3).max(60).regex(/^[A-Za-z0-9]+$/),
+  gameLogin: z.string().trim().min(2).max(60).regex(/^[A-Za-z0-9]+$/),
   currentPassword: z.string().min(1).max(128),
   recaptchaToken: z.string().optional()
 });
