@@ -1,4 +1,4 @@
-import { randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -47,11 +47,48 @@ const simulateApprovedPaymentSchema = z.object({
   orderNumber: z.string().trim().min(1).max(64)
 });
 
-function buildOrderNumber(now = new Date()) {
-  const date = now.toISOString().slice(0, 10).replaceAll("-", "");
-  const suffix = randomInt(100000, 999999);
+// Charset for the random suffix: unambiguous uppercase letters + digits (no 0/O/1/I)
+// so support/admin can read order numbers aloud without confusion. 32 chars => each
+// byte maps via `% 32` without modulo bias (256 is an exact multiple of 32).
+const orderNumberAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const orderNumberRandomLength = 6;
+const orderNumberMaxAttempts = 5;
 
-  return `SU-${date}-${suffix}`;
+// Non-sequential order number: SU-{timestamp_base36}-{random}.
+// Example: SU-LMK2J1A-A8X3F2. The timestamp keeps rough chronological ordering for
+// support, while the crypto-random suffix prevents enumeration/guessing of other
+// orders. This stays the externalReference used to reconcile Asaas webhooks.
+function buildOrderNumber(now = new Date()) {
+  const timestamp = now.getTime().toString(36).toUpperCase();
+  const bytes = randomBytes(orderNumberRandomLength);
+  let random = "";
+  for (let i = 0; i < orderNumberRandomLength; i += 1) {
+    random += orderNumberAlphabet[(bytes[i] ?? 0) % orderNumberAlphabet.length];
+  }
+
+  return `SU-${timestamp}-${random}`;
+}
+
+// Generate an order number guaranteed unique against the DB. The unique constraint
+// is the real guard against collisions; this just retries a few times so we don't
+// surface a constraint error for the (astronomically rare) random clash.
+async function generateUniqueOrderNumber(tx: Prisma.TransactionClient, now = new Date()) {
+  for (let attempt = 0; attempt < orderNumberMaxAttempts; attempt += 1) {
+    const candidate = buildOrderNumber(now);
+    const existing = await tx.order.findUnique({
+      where: { orderNumber: candidate },
+      select: { id: true }
+    });
+    if (!existing) {
+      return candidate;
+    }
+  }
+
+  throw new AppError(
+    500,
+    "INTERNAL_SERVER_ERROR",
+    "Nao foi possivel gerar um numero de pedido unico. Tente novamente."
+  );
 }
 
 function toIsoDate(value: Date | null) {
@@ -309,10 +346,11 @@ export class OrdersService {
             expiresAt: addHours(now, 24)
           }
         });
+        const orderNumber = await generateUniqueOrderNumber(tx, now);
         const order = await tx.order.create({
           data: {
             userId: user.id,
-            orderNumber: buildOrderNumber(now),
+            orderNumber,
             status: "pending_payment",
             packageCode: storePackage.code,
             packageName: storePackage.name,
