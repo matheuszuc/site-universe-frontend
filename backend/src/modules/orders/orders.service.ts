@@ -38,6 +38,9 @@ type ApprovePaymentInput = {
 };
 
 const orderCreateScope = "order_create";
+// Order.status values that count as genuinely paid. Used to fail closed: a pending
+// order must never expose paidAt to the user panel, even if data ever diverged.
+const paidOrderStatuses = new Set(["paid", "fulfilled"]);
 const futurePaymentProvider = "future_webhook_provider";
 const approvablePaymentStatuses = new Set(["pending", "processing"]);
 const simulateApprovedPaymentSchema = z.object({
@@ -168,7 +171,8 @@ function buildOrderSummary(order: {
     currency: order.currency,
     status: order.status,
     createdAt: order.createdAt.toISOString(),
-    paidAt: toIsoDate(order.paidAt),
+    // Fail closed: only surface paidAt when the order itself is in a paid status.
+    paidAt: paidOrderStatuses.has(order.status) ? toIsoDate(order.paidAt) : null,
     paymentProvider: order.payment?.provider ?? null,
     paymentStatus: order.payment?.status ?? null
   };

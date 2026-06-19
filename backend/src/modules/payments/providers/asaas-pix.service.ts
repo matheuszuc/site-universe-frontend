@@ -360,8 +360,16 @@ export class AsaasPixService {
       return;
     }
 
-    if (!receivedToken || !safeStringEquals(receivedToken, env.ASAAS_WEBHOOK_TOKEN)) {
-      throw new AppError(403, "FORBIDDEN", "Token de webhook inválido.");
+    // Public response must stay generic (never reveal the token/header/mechanism).
+    // Internal log records only the reason — never the received value or the secret.
+    if (!receivedToken) {
+      console.warn("asaas webhook rejected", { reason: "missing_token" });
+      throw new AppError(403, "FORBIDDEN", "Acesso negado.");
+    }
+
+    if (!safeStringEquals(receivedToken, env.ASAAS_WEBHOOK_TOKEN)) {
+      console.warn("asaas webhook rejected", { reason: "invalid_token" });
+      throw new AppError(403, "FORBIDDEN", "Acesso negado.");
     }
   }
 }
