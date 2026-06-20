@@ -21,6 +21,7 @@ export type Translations = {
   }
   register: {
     title: string; subtitle: string; usernameLabel: string; usernamePlaceholder: string
+    usernameLowercaseNotice: string
     confirmPasswordLabel: string; confirmPasswordPlaceholder: string
     terms1: string; termsLink: string; terms2: string; privacyLink: string
     submit: string; submitting: string; hasAccount: string; signIn: string
@@ -186,7 +187,8 @@ const ptBR: Translations = {
     title: 'Registro Universe',
     subtitle: 'Crie sua conta para começar sua jornada no Site Universe.',
     usernameLabel: 'Nome de usuário',
-    usernamePlaceholder: 'UniversePlayer',
+    usernamePlaceholder: 'universeplayer',
+    usernameLowercaseNotice: 'Convertemos para minúsculas: o login do jogo diferencia maiúsculas de minúsculas.',
     confirmPasswordLabel: 'Confirmar senha',
     confirmPasswordPlaceholder: 'Repita a senha',
     terms1: 'Li e aceito os',

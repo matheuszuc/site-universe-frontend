@@ -45,16 +45,18 @@ const passwordSchema = z
   );
 
 // Registration username = the GF game login (mid). Must be game-login compatible:
-// only letters and digits (no spaces, accents, HTML, or control chars), matching
-// the frontend username rule. Alphanumeric-only is inherently XSS-safe.
+// only lowercase letters a-z and digits 0-9 (no spaces, accents, HTML, or control
+// chars). The GF database treats the login as case-sensitive, so uppercase here
+// causes in-game login failures; we enforce lowercase to match the game client.
+// Alphanumeric-only is inherently XSS-safe.
 const nameSchema = z
   .string()
   .trim()
   .min(3, "O nome de usuário deve ter no mínimo 3 caracteres.")
   .max(20, "O nome de usuário deve ter no máximo 20 caracteres.")
   .regex(
-    /^[A-Za-z0-9]+$/,
-    "O nome de usuário deve usar apenas letras e números."
+    /^[a-z0-9]+$/,
+    "Use apenas letras minúsculas (a-z) e números."
   );
 
 export const registerSchema = z.object({

@@ -1,7 +1,9 @@
 import { z } from 'zod'
 import { formMessages } from '../../../utils/formMessages'
 
-const usernameRegex = /^[A-Za-z0-9]+$/
+// GF-compatible: only lowercase letters a-z and digits 0-9. The game login is
+// case-sensitive, so uppercase breaks in-game login even with the account created.
+const usernameRegex = /^[a-z0-9]+$/
 // GF-compatible: only lowercase letters a-z and digits 0-9, min 10 chars
 const passwordRegex = /^[a-z0-9]{10,64}$/
 

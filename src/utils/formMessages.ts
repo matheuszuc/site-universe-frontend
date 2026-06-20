@@ -6,7 +6,7 @@ export const formMessages = {
     'A senha deve ter no mínimo 10 caracteres e usar apenas letras minúsculas e números.',
   passwordConfirmation: 'A confirmação de senha deve ser igual à senha.',
   username:
-    'Nome de usuário deve ter de 3 a 20 caracteres e conter apenas letras sem acento e números.',
+    'Nome de usuário deve ter de 3 a 20 caracteres e usar apenas letras minúsculas (a-z) e números.',
   forgotPassword:
     'Se este e-mail existir, enviaremos instruções para redefinir sua senha.',
   resendVerification:

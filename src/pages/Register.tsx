@@ -22,6 +22,7 @@ export default function Register() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [errorMessage, setErrorMessage] = useState<string>()
+  const [usernameConverted, setUsernameConverted] = useState(false)
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -74,13 +75,32 @@ export default function Register() {
               <label className="auth-label" htmlFor="username">
                 {t.register.usernameLabel}
               </label>
-              <Input
-                autoComplete="username"
-                error={errors.username?.message}
-                id="username"
-                placeholder={t.register.usernamePlaceholder}
-                {...register('username')}
-              />
+              {(() => {
+                const usernameField = register('username')
+                return (
+                  <Input
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    error={errors.username?.message}
+                    id="username"
+                    placeholder={t.register.usernamePlaceholder}
+                    {...usernameField}
+                    onChange={(event) => {
+                      const raw = event.target.value
+                      const lowered = raw.toLowerCase()
+                      setUsernameConverted(lowered !== raw)
+                      event.target.value = lowered
+                      void usernameField.onChange(event)
+                    }}
+                  />
+                )
+              })()}
+              {usernameConverted && !errors.username && (
+                <p className="mt-1 text-xs text-cyan-100" role="status">
+                  {t.register.usernameLowercaseNotice}
+                </p>
+              )}
               <FormError id="username-error" message={errors.username?.message} />
             </div>
 
