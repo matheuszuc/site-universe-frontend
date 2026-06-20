@@ -61,6 +61,8 @@ export type AdminAuditLog = {
   actorType: string
   actorId: string | null
   userId: string | null
+  userName: string | null
+  userEmail: string | null
   orderId: string | null
   success: boolean
   reason: string | null

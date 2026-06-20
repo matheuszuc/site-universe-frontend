@@ -120,7 +120,8 @@ export async function getAdminAuditLogsController(
       orderId: true,
       success: true,
       reason: true,
-      createdAt: true
+      createdAt: true,
+      user: { select: { name: true, email: true } }
     }
   });
 
@@ -132,6 +133,8 @@ export async function getAdminAuditLogsController(
       actorType: l.actorType,
       actorId: l.actorId ?? null,
       userId: l.userId ?? null,
+      userName: l.user?.name ?? null,
+      userEmail: l.user?.email ?? null,
       orderId: l.orderId ?? null,
       success: l.success,
       reason: l.reason ?? null,

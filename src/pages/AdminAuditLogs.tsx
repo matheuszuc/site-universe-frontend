@@ -96,8 +96,17 @@ export default function AdminAuditLogs() {
                     <td className="max-w-xs truncate text-xs">
                       {log.reason ?? t.admin.noDataLabel}
                     </td>
-                    <td className="font-mono text-xs">
-                      {log.userId ? log.userId.slice(0, 8) + '...' : t.admin.noDataLabel}
+                    <td className="text-xs" title={log.userId ?? undefined}>
+                      {log.userName || log.userEmail ? (
+                        <div className="flex flex-col">
+                          {log.userName && <span className="text-white">{log.userName}</span>}
+                          {log.userEmail && <span className="text-white/60">{log.userEmail}</span>}
+                        </div>
+                      ) : log.userId ? (
+                        <span className="font-mono">{log.userId.slice(0, 8) + '...'}</span>
+                      ) : (
+                        t.admin.noDataLabel
+                      )}
                     </td>
                     <td className="font-mono text-xs">
                       {log.orderId ? log.orderId.slice(0, 8) + '...' : t.admin.noDataLabel}
