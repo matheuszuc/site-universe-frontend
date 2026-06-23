@@ -124,11 +124,11 @@ async function logAsaasError(context: string, response: Response) {
   }
 
   // Status + safe error body only; the access_token is never included.
-  console.error("Asaas request failed", JSON.stringify({
+  console.error("Asaas request failed", {
     context,
     status: response.status,
     error: await readErrorFields(response)
-  }, null, 2));
+  });
 }
 
 // Asaas payment.status -> normalized internal status.
