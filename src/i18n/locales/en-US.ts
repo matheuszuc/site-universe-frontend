@@ -16,7 +16,7 @@ const enUS: Translations = {
   hallOfFame: {
     kicker: 'PvP Ranking',
     title: 'Hall of Fame',
-    subtitle: 'The 50 best Battlefield players, ranked by points.',
+    subtitle: 'The 50 best arena players.',
     searchLabel: 'Search character',
     searchPlaceholder: 'Character name',
     loading: 'Loading ranking...',

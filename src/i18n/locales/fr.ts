@@ -16,7 +16,7 @@ const fr: Translations = {
   hallOfFame: {
     kicker: 'Classement PvP',
     title: 'Hall de la Gloire',
-    subtitle: 'Les 50 meilleurs joueurs du Battlefield, classés par points.',
+    subtitle: "Les 50 meilleurs joueurs de l'arène.",
     searchLabel: 'Rechercher un personnage',
     searchPlaceholder: 'Nom du personnage',
     loading: 'Chargement du classement...',
