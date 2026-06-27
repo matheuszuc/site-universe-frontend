@@ -95,7 +95,13 @@ export class RankingService {
       const [snapshotRows, currentRows] = await Promise.all([
         prisma.rankingMonthlySnapshot.findMany({
           where: { snapshotMonth: latest.snapshotMonth, snapshotYear: latest.snapshotYear },
-          select: { playerName: true, winCount: true, loseCount: true, mvpCount: true }
+          select: {
+            playerName: true,
+            joinCount: true,
+            winCount: true,
+            loseCount: true,
+            mvpCount: true
+          }
         }),
         gfDatabaseService.getAllBattlefieldCareer()
       ]);

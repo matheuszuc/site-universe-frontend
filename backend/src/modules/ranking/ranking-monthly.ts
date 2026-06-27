@@ -2,6 +2,7 @@ import type { BattlefieldCareerSnapshotRow } from "../game-delivery/gf-database.
 
 // Linha de baseline (snapshot do inicio do ciclo) ja normalizada por nome.
 export type BaselineCounts = {
+  joinCount: number;
   winCount: number;
   loseCount: number;
   mvpCount: number;
@@ -26,12 +27,19 @@ function fieldDiff(current: number, baseline: number) {
 }
 
 export function buildBaselineMap(
-  rows: { playerName: string; winCount: number; loseCount: number; mvpCount: number }[]
+  rows: {
+    playerName: string;
+    joinCount: number;
+    winCount: number;
+    loseCount: number;
+    mvpCount: number;
+  }[]
 ) {
   const baseline = new Map<string, BaselineCounts>();
 
   for (const row of rows) {
     baseline.set(row.playerName, {
+      joinCount: row.joinCount,
       winCount: row.winCount,
       loseCount: row.loseCount,
       mvpCount: row.mvpCount
@@ -42,21 +50,24 @@ export function buildBaselineMap(
 }
 
 // Calcula os pontos feitos no ciclo para cada jogador atual e ordena por pontos DESC.
-// Formula: (win_diff * 2) - (lose_diff * 2) + (mvp_diff * 3).
+// Formula: (win_diff * 2) - (lose_diff * 3) + (mvp_diff * 1) - (quit_diff * 3),
+// onde quit_diff = join_diff - win_diff - lose_diff (entrou na arena mas nao terminou).
 export function computeMonthlyEntries(
   baseline: Map<string, BaselineCounts>,
   currentRows: BattlefieldCareerSnapshotRow[]
 ): MonthlyComputedEntry[] {
   const entries = currentRows.map((row) => {
     const base = baseline.get(row.player_name);
+    const joinDiff = fieldDiff(row.join_count, base?.joinCount ?? 0);
     const winDiff = fieldDiff(row.win_count, base?.winCount ?? 0);
     const loseDiff = fieldDiff(row.lose_count, base?.loseCount ?? 0);
     const mvpDiff = fieldDiff(row.mvp_count, base?.mvpCount ?? 0);
+    const quitDiff = joinDiff - winDiff - loseDiff;
 
     return {
       playerName: row.player_name,
       playerClass: Number(row.player_class),
-      points: winDiff * 2 - loseDiff * 2 + mvpDiff * 3,
+      points: winDiff * 2 - loseDiff * 3 + mvpDiff * 1 - quitDiff * 3,
       winCount: winDiff,
       loseCount: loseDiff,
       mvpCount: mvpDiff

@@ -20,6 +20,7 @@ type InsertRewardBoxInput = {
 export type BattlefieldCareerRow = {
   player_name: string;
   player_class: number;
+  join_count: number;
   win_count: number;
   lose_count: number;
   mvp_count: number;
@@ -29,6 +30,7 @@ export type BattlefieldCareerRow = {
 export type BattlefieldCareerSnapshotRow = {
   player_name: string;
   player_class: number;
+  join_count: number;
   win_count: number;
   lose_count: number;
   mvp_count: number;
@@ -61,10 +63,12 @@ export class GfDatabaseService {
         SELECT
           player_name,
           player_class,
+          join_count,
           win_count,
           lose_count,
           mvp_count,
-          (win_count * 2) - (lose_count * 2) + (mvp_count * 3) AS points
+          ((win_count * 2) - (lose_count * 3) + (mvp_count * 1)
+           - ((join_count - win_count - lose_count) * 3)) AS points
         FROM battlefield_career
         WHERE ($1::text IS NULL OR player_name ILIKE '%' || $1 || '%')
         ORDER BY points DESC
@@ -84,6 +88,7 @@ export class GfDatabaseService {
         SELECT
           player_name,
           player_class,
+          join_count,
           win_count,
           lose_count,
           mvp_count

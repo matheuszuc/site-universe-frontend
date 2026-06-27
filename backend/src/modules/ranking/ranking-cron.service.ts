@@ -47,7 +47,13 @@ export async function runMonthlyRankingJob(now = new Date()) {
             snapshotMonth: baselineMeta.snapshotMonth,
             snapshotYear: baselineMeta.snapshotYear
           },
-          select: { playerName: true, winCount: true, loseCount: true, mvpCount: true }
+          select: {
+            playerName: true,
+            joinCount: true,
+            winCount: true,
+            loseCount: true,
+            mvpCount: true
+          }
         })
       : [];
 
@@ -89,6 +95,7 @@ export async function runMonthlyRankingJob(now = new Date()) {
         data: currentRows.map((row) => ({
           playerName: row.player_name,
           playerClass: Number(row.player_class),
+          joinCount: row.join_count,
           winCount: row.win_count,
           loseCount: row.lose_count,
           mvpCount: row.mvp_count,

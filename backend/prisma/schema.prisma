@@ -575,6 +575,7 @@ model RankingMonthlySnapshot {
   id            String   @id @default(uuid()) @db.Uuid
   playerName    String   @map("player_name")
   playerClass   Int      @map("player_class")
+  joinCount     Int      @map("join_count")
   winCount      Int      @map("win_count")
   loseCount     Int      @map("lose_count")
   mvpCount      Int      @map("mvp_count")
