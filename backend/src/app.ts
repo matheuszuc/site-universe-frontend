@@ -13,6 +13,8 @@ import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
 import { devPaymentsRoutes } from "./modules/dev/dev-payments.routes.js";
 import { ordersRoutes } from "./modules/orders/orders.routes.js";
 import { asaasWebhookRoutes } from "./modules/payments/asaas-webhook.routes.js";
+import { registerRankingCron } from "./modules/ranking/ranking-cron.service.js";
+import { adminRankingRoutes, rankingRoutes } from "./modules/ranking/ranking.routes.js";
 import { rewardsRoutes } from "./modules/rewards/rewards.routes.js";
 import { storeRoutes } from "./modules/store/store.routes.js";
 import { registerErrorHandler } from "./middlewares/error-handler.js";
@@ -76,6 +78,12 @@ export async function buildApp() {
   await app.register(rewardsRoutes, {
     prefix: "/api/rewards"
   });
+  await app.register(rankingRoutes, {
+    prefix: "/api/ranking"
+  });
+  await app.register(adminRankingRoutes, {
+    prefix: "/api/admin/ranking"
+  });
   await app.register(ordersRoutes, {
     prefix: "/orders"
   });
@@ -86,6 +94,12 @@ export async function buildApp() {
     await app.register(devPaymentsRoutes, {
       prefix: "/dev/payments"
     });
+  }
+
+  // Agenda o fechamento mensal do ranking (dia 4, 00:05). Fora do ambiente de teste
+  // para nao deixar timers abertos durante os testes.
+  if (env.NODE_ENV !== "test") {
+    registerRankingCron();
   }
 
   return app;

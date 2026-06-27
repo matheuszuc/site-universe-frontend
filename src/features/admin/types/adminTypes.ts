@@ -72,3 +72,19 @@ export type AdminAuditLog = {
 export type AdminAuditLogsResponse = {
   logs: AdminAuditLog[]
 }
+
+export type AdminChampion = {
+  position: number
+  playerName: string
+  className: string
+  points: number
+  winCount: number
+  loseCount: number
+  mvpCount: number
+  championMonth: number
+  championYear: number
+}
+
+export type AdminChampionsResponse = {
+  champions: AdminChampion[]
+}

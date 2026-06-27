@@ -23,6 +23,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { label: t.admin.ordersLink, to: '/admin/orders', icon: 'bx-receipt' },
     { label: t.admin.gameDeliveriesLink, to: '/admin/game-deliveries', icon: 'bx-package' },
     { label: t.admin.auditLogsLink, to: '/admin/audit-logs', icon: 'bx-history' },
+    { label: t.admin.championsLink, to: '/admin/champions', icon: 'bx-trophy' },
   ]
 
   async function handleLogout() {

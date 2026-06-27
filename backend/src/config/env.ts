@@ -46,6 +46,8 @@ const envSchema = z.object({
   EMAIL_VERIFICATION_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes"),
   ACCOUNT_MIGRATION_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
   ACCOUNT_MIGRATION_RATE_LIMIT_WINDOW: z.string().min(1).default("15 minutes"),
+  RANKING_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(30),
+  RANKING_RATE_LIMIT_WINDOW: z.string().min(1).default("1 minute"),
   ACCOUNT_MIGRATION_ENABLED: booleanStringSchema.default(true),
   RECAPTCHA_ENABLED: booleanStringSchema.default(false),
   RECAPTCHA_SECRET_KEY: z.string().optional(),
@@ -60,6 +62,9 @@ const envSchema = z.object({
   GF_DB_PASSWORD: z.string().optional(),
   GF_DB_NAME: z.string().min(1).default("gf_ms"),
   GF_ACCOUNT_DB_NAME: z.string().min(1).default("gf_ls"),
+  // Banco do servidor de jogo (game server) onde fica battlefield_career, lido
+  // pelo Hall da Fama (GET /api/ranking/mvp). Somente leitura.
+  GF_STATS_DB_NAME: z.string().min(1).default("gf_gs"),
   GF_DB_SSL: booleanStringSchema,
   GAME_DELIVERY_ENABLED: booleanStringSchema.default(false),
   GAME_ACCOUNT_CREATION_ENABLED: booleanStringSchema.default(true),

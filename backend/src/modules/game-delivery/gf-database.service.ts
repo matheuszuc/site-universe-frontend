@@ -17,6 +17,23 @@ type InsertRewardBoxInput = {
   point: number;
 };
 
+export type BattlefieldCareerRow = {
+  player_name: string;
+  player_class: number;
+  win_count: number;
+  lose_count: number;
+  mvp_count: number;
+  points: number;
+};
+
+export type BattlefieldCareerSnapshotRow = {
+  player_name: string;
+  player_class: number;
+  win_count: number;
+  lose_count: number;
+  mvp_count: number;
+};
+
 // IDs de box por rank da Reward Scale, confirmados pelo time do jogo. Allowlist de
 // defesa-em-profundidade: mesmo que reward_tiers.box_game_item_id seja alterado no
 // banco (erro ou ataque), nenhum item fora desta lista chega ao item_receivable.
@@ -30,6 +47,52 @@ function isGfDatabaseConfigured() {
 export class GfDatabaseService {
   private gamePool: pg.Pool | null = null;
   private accountPool: pg.Pool | null = null;
+  private statsPool: pg.Pool | null = null;
+
+  isConfigured() {
+    return isGfDatabaseConfigured();
+  }
+
+  // Leitura publica do ranking de Hall da Fama (battlefield_career). Somente SELECT,
+  // sem dados sensiveis. O LIMIT fixo (50) e parametrizacao protegem contra abuso.
+  async getBattlefieldRanking(search: string | null) {
+    const result = await this.getStatsPool().query<BattlefieldCareerRow>(
+      `
+        SELECT
+          player_name,
+          player_class,
+          win_count,
+          lose_count,
+          mvp_count,
+          (win_count * 2) - (lose_count * 2) + (mvp_count * 3) AS points
+        FROM battlefield_career
+        WHERE ($1::text IS NULL OR player_name ILIKE '%' || $1 || '%')
+        ORDER BY points DESC
+        LIMIT 50
+      `,
+      [search]
+    );
+
+    return result.rows;
+  }
+
+  // Leitura completa (sem LIMIT) do battlefield_career, usada pelo snapshot mensal
+  // e pelo calculo do ranking do ciclo. Somente SELECT, sem dados sensiveis.
+  async getAllBattlefieldCareer() {
+    const result = await this.getStatsPool().query<BattlefieldCareerSnapshotRow>(
+      `
+        SELECT
+          player_name,
+          player_class,
+          win_count,
+          lose_count,
+          mvp_count
+        FROM battlefield_career
+      `
+    );
+
+    return result.rows;
+  }
 
   async creditAp(input: CreditApInput) {
     if (input.apAmount <= 0) {
@@ -102,6 +165,14 @@ export class GfDatabaseService {
     }
 
     return this.accountPool;
+  }
+
+  private getStatsPool() {
+    if (!this.statsPool) {
+      this.statsPool = this.createPool(env.GF_STATS_DB_NAME);
+    }
+
+    return this.statsPool;
   }
 }
 

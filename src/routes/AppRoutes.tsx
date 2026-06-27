@@ -3,10 +3,12 @@ import AdminAuditLogs from '../pages/AdminAuditLogs'
 import AdminDashboard from '../pages/AdminDashboard'
 import AdminGameDeliveries from '../pages/AdminGameDeliveries'
 import AdminOrders from '../pages/AdminOrders'
+import AdminRankingChampions from '../pages/AdminRankingChampions'
 import AdminUsers from '../pages/AdminUsers'
 import ForgotPassword from '../pages/ForgotPassword'
 import Home from '../pages/Home'
 import Download from '../pages/Download'
+import HallDaFama from '../pages/HallDaFama'
 import Login from '../pages/Login'
 import NotFound from '../pages/NotFound'
 import PrivacyPolicy from '../pages/PrivacyPolicy'
@@ -26,6 +28,7 @@ export default function AppRoutes() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/download" element={<Download />} />
+      <Route path="/hall-da-fama" element={<HallDaFama />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
@@ -73,6 +76,14 @@ export default function AppRoutes() {
         element={
           <AdminRoute>
             <AdminAuditLogs />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/champions"
+        element={
+          <AdminRoute>
+            <AdminRankingChampions />
           </AdminRoute>
         }
       />

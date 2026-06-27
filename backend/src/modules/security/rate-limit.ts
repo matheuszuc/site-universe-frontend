@@ -188,6 +188,18 @@ export async function passwordResetRateLimit(request: FastifyRequest, _reply: Fa
   }
 }
 
+export async function rankingRateLimit(request: FastifyRequest, _reply: FastifyReply) {
+  const allowed = consumeRateLimit({
+    key: `ranking:ip:${request.ip}`,
+    max: env.RANKING_RATE_LIMIT_MAX,
+    window: env.RANKING_RATE_LIMIT_WINDOW
+  });
+
+  if (!allowed) {
+    throw buildRateLimitError("Muitas requisições. Tente novamente em instantes.");
+  }
+}
+
 export async function accountMigrationRateLimit(
   request: FastifyRequest,
   _reply: FastifyReply

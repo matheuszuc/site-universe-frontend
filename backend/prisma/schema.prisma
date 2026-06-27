@@ -566,3 +566,41 @@ model AdminAuditLog {
   @@index([createdAt])
   @@map("admin_audit_logs")
 }
+
+// Snapshot mensal dos dados brutos do battlefield_career (banco do jogo). Tirado
+// pelo cron no dia 4 de cada mes, antes do reset manual do servidor (~dia 5). O
+// ranking mensal e calculado como a diferenca entre os dados atuais e este snapshot.
+// Nao contem dados sensiveis do site (sem e-mail, sem userId).
+model RankingMonthlySnapshot {
+  id            String   @id @default(uuid()) @db.Uuid
+  playerName    String   @map("player_name")
+  playerClass   Int      @map("player_class")
+  winCount      Int      @map("win_count")
+  loseCount     Int      @map("lose_count")
+  mvpCount      Int      @map("mvp_count")
+  snapshotMonth Int      @map("snapshot_month")
+  snapshotYear  Int      @map("snapshot_year")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([snapshotMonth, snapshotYear])
+  @@map("ranking_monthly_snapshots")
+}
+
+// Top 10 campeoes de cada ciclo mensal, congelado pelo cron no fechamento do mes.
+// points/win/lose/mvp sao os valores FEITOS NO MES (diferenca contra o snapshot).
+model RankingMonthlyChampion {
+  id            String   @id @default(uuid()) @db.Uuid
+  position      Int
+  playerName    String   @map("player_name")
+  playerClass   Int      @map("player_class")
+  points        Int
+  winCount      Int      @map("win_count")
+  loseCount     Int      @map("lose_count")
+  mvpCount      Int      @map("mvp_count")
+  championMonth Int      @map("champion_month")
+  championYear  Int      @map("champion_year")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([championMonth, championYear])
+  @@map("ranking_monthly_champions")
+}

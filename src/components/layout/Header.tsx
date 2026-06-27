@@ -7,6 +7,7 @@ import LanguageSwitcher from '../LanguageSwitcher'
 const publicNavItems = (t: ReturnType<typeof useTranslation>['t']) => [
   { label: t.nav.home, to: '/' },
   { label: t.nav.download, to: '/download' },
+  { label: t.nav.hallOfFame, to: '/hall-da-fama' },
 ]
 
 export default function Header() {

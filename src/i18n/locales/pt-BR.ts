@@ -1,8 +1,16 @@
 export type Translations = {
   lang: { label: string; short: string }
   nav: {
-    home: string; download: string; login: string; register: string
+    home: string; download: string; hallOfFame: string; login: string; register: string
     dashboard: string; discord: string
+  }
+  hallOfFame: {
+    kicker: string; title: string; subtitle: string
+    searchLabel: string; searchPlaceholder: string
+    loading: string; empty: string
+    colPosition: string; colClass: string; colPlayer: string
+    colPoints: string; colWins: string; colLosses: string
+    tabGeneral: string; tabMonthly: string; monthlyUnavailable: string
   }
   auth: {
     email: string; emailPlaceholder: string; password: string
@@ -122,6 +130,13 @@ export type Translations = {
     eventTypeLabel: string; actorLabel: string; successLabel: string
     reasonLabel: string; userLabel: string; orderLabel: string
     noDataLabel: string; loadError: string
+    championsLink: string
+    championsKicker: string; championsTitle: string; championsSubtitle: string
+    championsLoading: string; championsEmpty: string
+    championMonthLabel: string; championYearLabel: string; championViewButton: string
+    championPositionLabel: string; championPlayerLabel: string; championClassLabel: string
+    championPointsLabel: string; championWinsLabel: string; championLossesLabel: string
+    championMvpsLabel: string; championPeriodLabel: string
   }
   home: {
     featuredClass: string; createAccount: string; signIn: string; download: string
@@ -142,10 +157,30 @@ const ptBR: Translations = {
   nav: {
     home: 'Home',
     download: 'Download',
+    hallOfFame: 'Hall da Fama',
     login: 'Login',
     register: 'Registro',
     dashboard: 'Painel',
     discord: 'Discord',
+  },
+
+  hallOfFame: {
+    kicker: 'Ranking PvP',
+    title: 'Hall da Fama',
+    subtitle: 'Os 50 melhores jogadores do Battlefield, ordenados por pontos.',
+    searchLabel: 'Buscar personagem',
+    searchPlaceholder: 'Nome do personagem',
+    loading: 'Carregando ranking...',
+    empty: 'Nenhum jogador encontrado.',
+    colPosition: '#',
+    colClass: 'Classe',
+    colPlayer: 'Personagem',
+    colPoints: 'Pontos',
+    colWins: 'Vitórias',
+    colLosses: 'Derrotas',
+    tabGeneral: 'Ranking Geral',
+    tabMonthly: 'Ranking do Mês',
+    monthlyUnavailable: 'Ranking mensal disponível a partir do dia 4 do próximo mês.',
   },
 
   auth: {
@@ -453,6 +488,23 @@ const ptBR: Translations = {
     orderLabel: 'Pedido',
     noDataLabel: '—',
     loadError: 'Erro ao carregar dados.',
+    championsLink: 'Campeões',
+    championsKicker: 'Administração',
+    championsTitle: 'Campeões do mês',
+    championsSubtitle: 'Top 10 campeões congelados de cada ciclo mensal do ranking.',
+    championsLoading: 'Carregando campeões...',
+    championsEmpty: 'Nenhum campeão registrado para este mês.',
+    championMonthLabel: 'Mês',
+    championYearLabel: 'Ano',
+    championViewButton: 'Consultar',
+    championPositionLabel: '#',
+    championPlayerLabel: 'Personagem',
+    championClassLabel: 'Classe',
+    championPointsLabel: 'Pontos',
+    championWinsLabel: 'Vitórias',
+    championLossesLabel: 'Derrotas',
+    championMvpsLabel: 'MVPs',
+    championPeriodLabel: 'Período',
   },
 
   home: {
