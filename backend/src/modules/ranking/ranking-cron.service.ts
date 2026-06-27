@@ -5,9 +5,10 @@ import { prisma } from "../../database/prisma.js";
 import { gfDatabaseService } from "../game-delivery/gf-database.service.js";
 import { buildBaselineMap, computeMonthlyEntries } from "./ranking-monthly.js";
 
-// Dia 4 de cada mes, 00:05. O snapshot e tirado antes do reset manual do servidor
-// (~dia 5), congelando os campeoes do ciclo que esta encerrando.
-const RANKING_CRON_EXPRESSION = "5 0 4 * *";
+// Dia 4 de cada mes, 00:00 (meia-noite entre o dia 3 e o dia 4). O snapshot e tirado
+// antes do reset manual do servidor (~dia 5), congelando os campeoes do ciclo que
+// esta encerrando.
+const RANKING_CRON_EXPRESSION = "0 0 4 * *";
 
 // Snapshots com mais de 13 meses sao descartados na limpeza automatica.
 const SNAPSHOT_RETENTION_MONTHS = 13;
