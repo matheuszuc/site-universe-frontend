@@ -76,6 +76,7 @@ export default function HallDaFama() {
                     <th>{tr.colClass}</th>
                     <th>{tr.colPlayer}</th>
                     <th>{tr.colPoints}</th>
+                    <th>{tr.mvpLabel}</th>
                     <th>{tr.colWins}</th>
                     <th>{tr.colLosses}</th>
                   </tr>
@@ -87,6 +88,7 @@ export default function HallDaFama() {
                       <td>{entry.className}</td>
                       <td className="hall-player">{entry.playerName}</td>
                       <td className="hall-points">{formatAmount(entry.points)}</td>
+                      <td>{formatAmount(entry.mvpCount)}</td>
                       <td>{formatAmount(entry.winCount)}</td>
                       <td>{formatAmount(entry.loseCount)}</td>
                     </tr>

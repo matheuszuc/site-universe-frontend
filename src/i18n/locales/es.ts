@@ -25,6 +25,7 @@ const es: Translations = {
     colClass: 'Clase',
     colPlayer: 'Personaje',
     colPoints: 'Puntos',
+    mvpLabel: 'MVP',
     colWins: 'Victorias',
     colLosses: 'Derrotas',
     tabGeneral: 'Ranking General',

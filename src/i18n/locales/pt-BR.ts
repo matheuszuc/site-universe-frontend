@@ -9,7 +9,7 @@ export type Translations = {
     searchLabel: string; searchPlaceholder: string
     loading: string; empty: string
     colPosition: string; colClass: string; colPlayer: string
-    colPoints: string; colWins: string; colLosses: string
+    colPoints: string; mvpLabel: string; colWins: string; colLosses: string
     tabGeneral: string; tabMonthly: string; monthlyUnavailable: string
   }
   auth: {
@@ -176,6 +176,7 @@ const ptBR: Translations = {
     colClass: 'Classe',
     colPlayer: 'Personagem',
     colPoints: 'Pontos',
+    mvpLabel: 'MVP',
     colWins: 'Vitórias',
     colLosses: 'Derrotas',
     tabGeneral: 'Ranking Geral',
